@@ -1,6 +1,6 @@
 Coding convention
 
-Potato-C is a unique language wich looks like a bad spinoff of C--. Trough
+Potato-C is a unique language which looks like a bad spinoff of C--. Trough
 it is not, and aims to achieve more.
 
 Let's start by setting ra8 to zero.
