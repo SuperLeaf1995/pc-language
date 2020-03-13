@@ -1,7 +1,10 @@
 _entryPoint:
 	;no params
-	mov 0
-	mov 6
-	mov 8
-	mov 8
+	mov ra8,0
+	mov ra8,ra16
+	mov ra32,ra8
+	mov ra8,ra8
+	mov ra8,ra16
+	mov ra32,ra8
+	mov ra8,ra8
 	ret

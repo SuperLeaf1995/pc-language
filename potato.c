@@ -431,12 +431,11 @@ int main(int argc, char * argv[]) {
 					while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ',') {
 						temp_operand[0][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
 						statementSecondLen++;
+						statementSecondLenSecond++;
 					}
-					statementSecondLen++; /*skip a char , */
+					temp_operand[0][statementSecondLenSecond] = '\0';
 					
-					while(temp_statement[strlen(builtStatement[2])+statementSecondLen] == ' ') {
-						statementSecondLen++; /*skip whitespaces*/
-					}
+					statementSecondLen++;
 					
 					statementSecondLenSecond = 0;
 					while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ')') {
@@ -444,19 +443,12 @@ int main(int argc, char * argv[]) {
 						statementSecondLen++;
 						statementSecondLenSecond++;
 					}
+					temp_operand[1][statementSecondLenSecond] = '\0';
 					
-					fprintf(out,"\tmov ");
+					fprintf(stdout,"\t%s %s\n",temp_operand[0],temp_operand[1]);
 					
 					/*Check for registers*/
-					for(i3 = 0; i3 < 1; i3++) {
-						if(memcmp(temp_operand[0],registerName[0],strlen(registerName[0])) == 0) {
-							fprintf(out,"%s",temp_operand[i3]);
-						} else {
-							fprintf(out,"%s",temp_operand[i3]);
-						}
-					}
-					
-					fprintf(out,"\n");
+					fprintf(out,"\tmov %s,%s\n",temp_operand[1],temp_operand[0]);
 				}
 				i++;
 			}
