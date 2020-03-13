@@ -1,0 +1,25 @@
+byte f;
+byte z;
+byte x;
+byte y;
+
+routine big(byte a, byte b) {
+	copy(a,b);
+	return;
+	halt;
+}
+
+routine small(byte c) {
+	copy(c,0);
+	copy(0,c);
+	copy(0x0200,c);
+	return;
+	halt;
+}
+
+routine foo(word bar) {
+	copy(bar,24);
+	copy(bar,32);
+	return;
+	halt;
+}

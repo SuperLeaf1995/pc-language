@@ -5,18 +5,28 @@
 #include <string.h>
 #include <memory.h>
 
+size_t i;
+size_t i2;
+size_t i3;
+
 /*Argument-processor variables*/
 FILE * out;
 FILE * in;
 char * outputFile;
 char * inputFile;
 char * namePlatform;
+char * functionGlossary;
 
 const char * defaultPlatform = "x86";
 const char * defaultOutputFileName = "out.bin";
+unsigned long defaultFunctionGlossarySize = 1024;
+unsigned long currentFunctionGlossaryPointer = 0;
+unsigned long functionGlossaryMaxSize = 1024;
 
 unsigned char platformId;
 unsigned char isReg;
+
+unsigned char streamEnd;
 
 const char * platforms[] = {
 	"cdc6000",
@@ -74,11 +84,11 @@ size_t statementLen;
 size_t statementSecondLen;
 size_t statementSecondLenSecond;
 
-char temp[64];
-char temp_param[64];
-char temp_statement[128];
+char temp[255];
+char temp_param[255];
+char temp_statement[127];
 char * temp_decompose;
-char temp_operand[4][64];
+char temp_operand[4][127];
 
 const char* token[] = {
 	"/*", /*Multiline comment opening*/
@@ -203,10 +213,211 @@ size_t getfilelen(FILE * _s) {
 	return i;
 }
 
+
+void doStatementParse(void) {
+	/*STATEMENT MINI-PROCESSOR*/
+	streamEnd = 0;
+	while(memcmp(fileData+i,token[7],1) == 0) { /*skip whitespaces*/
+		i++;
+	}
+	statementLen = 0;
+	while(memcmp(fileData+i,token[6],1) != 0) { /*grab all name after whitespace before ;*/
+		temp_statement[statementLen] = fileData[i];
+		statementLen++;
+		i++;
+		if(i > fileSize) {
+			i = fileSize;
+			streamEnd = 1;
+			return;
+		}
+	}
+	i++;
+	temp_statement[statementLen] = 0;
+	fprintf(stdout,"statement on scope %s : %s\n",temp,temp_statement);
+	/*STATEMENT POST-PROCESSOR*/
+	/*Write statement into an assembly thing*/
+	/*RETURN*/
+	if(memcmp(temp_statement,builtStatement[0],strlen(builtStatement[0])) == 0) {
+		if(platformId == 5) {
+			fprintf(out,"\trts\n");
+		} else if(platformId == 10) {
+			fprintf(out,"\tret\n");
+		}
+	}
+	/*HALT*/
+	else if(memcmp(temp_statement,builtStatement[8],strlen(builtStatement[8])) == 0) {
+		if(platformId == 5) {
+			fprintf(out,"_haltDefunct:\n");
+			fprintf(out,"\tjmp _haltDefunct\n");
+		} else if(platformId == 10) {
+			fprintf(out,"\thlt\n");
+		}
+	}
+	/*COPY*/
+	else if(memcmp(temp_statement,builtStatement[2],strlen(builtStatement[2])) == 0) {
+		/*get operands A and B*/
+		/*operand A*/
+		statementSecondLen = 1;
+		statementSecondLenSecond = 0;
+		while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ',') {
+			temp_operand[0][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
+			statementSecondLen++;
+			statementSecondLenSecond++;
+		}
+		temp_operand[0][statementSecondLenSecond] = '\0';
+				
+		statementSecondLen++;
+			
+		statementSecondLenSecond = 0;
+		while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ')') {
+			temp_operand[1][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
+			statementSecondLen++;
+			statementSecondLenSecond++;
+		}
+		temp_operand[1][statementSecondLenSecond] = '\0';	
+		fprintf(stdout,"\t%s %s\n",temp_operand[0],temp_operand[1]);
+		/*Check for registers*/
+		if(platformId == 10) {
+			fprintf(out,"\tmov ");
+			for(i3 = 0; i3 < 16; i3++) {
+				if(memcmp(temp_operand[0],registerName[i3],strlen(registerName[i3])) == 0) {
+					fprintf(out,reg_x86_rep[i3]);
+					isReg = 1;
+				}
+			}
+			if(isReg == 0) {
+				fprintf(out,"%s",temp_operand[0]);
+			}
+			isReg = 0;
+			fprintf(out,",");
+			for(i3 = 0; i3 < 16; i3++) {
+				if(memcmp(temp_operand[1],registerName[i3],strlen(registerName[i3])) == 0) {
+					fprintf(out,reg_x86_rep[i3]);
+					isReg = 1;
+				}
+			}
+			if(isReg == 0) {
+				fprintf(out,"%s",temp_operand[1]);
+			}
+			isReg = 0;
+		
+			fprintf(out,"\n");
+		}
+	}
+	/*COMPARE*/
+	else if(memcmp(temp_statement,builtStatement[1],strlen(builtStatement[1])) == 0) {
+		/*get operands A and B*/
+		/*operand A*/
+		statementSecondLen = 1;
+		statementSecondLenSecond = 0;
+		while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ',') {
+			temp_operand[0][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
+			statementSecondLen++;
+			statementSecondLenSecond++;
+		}
+		temp_operand[0][statementSecondLenSecond] = '\0';
+			
+		statementSecondLen++;
+		
+		statementSecondLenSecond = 0;
+		while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ')') {
+			temp_operand[1][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
+			statementSecondLen++;
+			statementSecondLenSecond++;
+		}
+		temp_operand[1][statementSecondLenSecond] = '\0';
+		
+		fprintf(stdout,"\t%s %s\n",temp_operand[0],temp_operand[1]);
+			
+		/*Check for registers*/
+		if(platformId == 10) {
+			fprintf(out,"\tcmp ");
+			for(i3 = 0; i3 < 16; i3++) {
+				if(memcmp(temp_operand[0],registerName[i3],strlen(registerName[i3])) == 0) {
+					fprintf(out,reg_x86_rep[i3]);
+					isReg = 1;
+				}
+			}
+			if(isReg == 0) {
+				fprintf(out,"%s",temp_operand[0]);
+			}
+			isReg = 0;
+			fprintf(out,",");
+			for(i3 = 0; i3 < 16; i3++) {
+				if(memcmp(temp_operand[1],registerName[i3],strlen(registerName[i3])) == 0) {
+					fprintf(out,reg_x86_rep[i3]);
+					isReg = 1;
+				}
+			}
+			if(isReg == 0) {
+				fprintf(out,"%s",temp_operand[1]);
+			}
+			isReg = 0;
+			
+			fprintf(out,"\n");
+		}
+	}
+	/*OR*/
+	else if(memcmp(temp_statement,builtStatement[4],strlen(builtStatement[4])) == 0) {
+		/*get operands A and B*/
+		/*operand A*/
+		statementSecondLen = 1;
+		statementSecondLenSecond = 0;
+		while(temp_statement[strlen(builtStatement[4])+statementSecondLen] != ',') {
+			temp_operand[0][statementSecondLenSecond] = temp_statement[strlen(builtStatement[4])+statementSecondLen]; /*skip STATEMENT and (*/
+			statementSecondLen++;
+			statementSecondLenSecond++;
+		}
+		temp_operand[0][statementSecondLenSecond] = '\0';
+		
+		statementSecondLen++;
+		
+		statementSecondLenSecond = 0;
+		while(temp_statement[strlen(builtStatement[4])+statementSecondLen] != ')') {
+			temp_operand[1][statementSecondLenSecond] = temp_statement[strlen(builtStatement[4])+statementSecondLen]; /*skip STATEMENT and (*/
+			statementSecondLen++;
+			statementSecondLenSecond++;
+		}
+		temp_operand[1][statementSecondLenSecond] = '\0';
+		
+		fprintf(stdout,"\t%s %s\n",temp_operand[0],temp_operand[1]);
+		
+		/*Check for registers*/
+		if(platformId == 10) {
+			fprintf(out,"\tor ");
+			for(i3 = 0; i3 < 16; i3++) {
+				if(memcmp(temp_operand[0],registerName[i3],strlen(registerName[i3])) == 0) {
+					fprintf(out,reg_x86_rep[i3]);
+					isReg = 1;
+				}
+			}
+			if(isReg == 0) {
+				fprintf(out,"%s",temp_operand[0]);
+			}
+			isReg = 0;
+			fprintf(out,",");
+			for(i3 = 0; i3 < 16; i3++) {
+				if(memcmp(temp_operand[1],registerName[i3],strlen(registerName[i3])) == 0) {
+					fprintf(out,reg_x86_rep[i3]);
+					isReg = 1;
+				}
+			}
+			if(isReg == 0) {
+				fprintf(out,"%s",temp_operand[1]);
+			}
+			isReg = 0;
+			
+			fprintf(out,"\n");
+		}
+	}
+	/*CUSTOM FUNCTION ie: foo(bar)*/
+	else {
+		
+	}
+	return;
+}
+
 int main(int argc, char * argv[]) {
-	size_t i;
-	size_t i2;
-	size_t i3;
 	/*Argument-processor*/
 	/*Processes the arguments and enables certain functions of the compiler*/
 	/*including warnings*/
@@ -262,6 +473,26 @@ int main(int argc, char * argv[]) {
 			memcpy(outputFile,argv[i],strlen(argv[i])+1);
 			ignoreOutputFile:
 			i = i;
+		} else if(strcmp("-fgmem",argv[i]) == 0) { /*Explicit function glossary size*/
+			i++; /*Increment into next argument*/
+			/*If i > argc, then issue error*/
+			if(i > argc) {
+				fprintf(stderr,"Function glossary memory command was issued, but no int was issued\n");
+				goto end;
+			}
+			fprintf(stdout,"Function glossary size issued was: %s\n",argv[i]);
+			if(functionGlossary != NULL) { /*If file was already issued, skip it!*/
+				fprintf(stdout,"FUnction glossary size was already issued\n");
+				goto ignoreFunctionGlossarySize;
+			}
+			functionGlossary = malloc(atol(argv[i])+1);
+			if(functionGlossary == NULL) {
+				fprintf(stderr,"Cannot allocate memory for explicit function glossary size\n");
+				goto end;
+			}
+			functionGlossaryMaxSize = atol(argv[i])+1;
+			ignoreFunctionGlossarySize:
+			i = i;
 		} else { /*input filename (implicit)*/
 			fprintf(stdout,"Input file issued was: %s\n",argv[i]);
 			if(inputFile != NULL) { /*If file was already issued, skip it!*/
@@ -303,6 +534,23 @@ int main(int argc, char * argv[]) {
 		}
 		memcpy(outputFile,defaultOutputFileName,strlen(defaultOutputFileName)+1);
 		fprintf(stdout,"Using implicit output filename: %s\n",outputFile);
+	}
+	
+	if(functionGlossary == NULL) {
+		functionGlossary = malloc(defaultFunctionGlossarySize);
+		if(functionGlossary == NULL) {
+			fprintf(stderr,"Cannot allocate memory for function glossary");
+			goto end;
+		}
+		fprintf(stdout,"Using default-sized (%lu bytes) function glossary\n",defaultFunctionGlossarySize);
+	}
+	
+	if(temp_decompose == NULL) {
+		temp_decompose = malloc(255);
+		if(temp_decompose == NULL) {
+			fprintf(stderr,"Cannot allocate memory for temp_decompose");
+			goto end;
+		}
 	}
 	
 	out = fopen(outputFile,"wb"); /*Open output file in binary mode*/
@@ -363,146 +611,37 @@ int main(int argc, char * argv[]) {
 		fprintf(out,"[section .text]\n\n");
 	}
 	for(i = 0; i < fileSize; i++) {
-		if(memcmp(fileData+i,keyword[0],8) == 0) {
-			fprintf(stdout,"BSS_BYTE <");
-			i += 8;
-			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
-				i++;
+		for(i3 = 0; i3 < 7; i3++) {
+			if(memcmp(fileData+i,keyword[i3],strlen(keyword[i3])) == 0) {
+				fprintf(stdout,"%s <",keyword[i3]);
+				varNameLen = 0;
+				i += strlen(keyword[i3]);
+				while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
+					i++;
+				}
+				while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
+					temp[varNameLen] = fileData[i];
+					varNameLen++;
+					i++;
+				}
+				temp[varNameLen+1] = 0;
+				fprintf(stdout,"%s",temp);
+				fprintf(stdout,">\n");
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
-				temp[varNameLen] = fileData[i];
-				varNameLen++;
-				i++;
-			}
-			temp[varNameLen+1] = 0;
-			fprintf(stdout,"%s",temp);
-			fprintf(stdout,">\n");
 		}
-		if(memcmp(fileData+i,keyword[1],8) == 0) {
-			fprintf(stdout,"BSS_WORD <");
-			i += 8;
-			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
-				i++;
-			}
-			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
-				temp[varNameLen] = fileData[i];
-				varNameLen++;
-				i++;
-			}
-			temp[varNameLen+1] = 0;
-			fprintf(stdout,"%s",temp);
-			fprintf(stdout,">\n");
-		}
-		if(memcmp(fileData+i,keyword[2],9) == 0) {
-			fprintf(stdout,"BSS_DWORD <");
-			i += 9;
-			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
-				i++;
-			}
-			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
-				temp[varNameLen] = fileData[i];
-				varNameLen++;
-				i++;
-			}
-			temp[varNameLen+1] = 0;
-			fprintf(stdout,"%s",temp);
-			fprintf(stdout,">\n");
-		}
-		if(memcmp(fileData+i,keyword[3],9) == 0) {
-			fprintf(stdout,"BSS_QWORD <");
-			i += 9;
-			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
-				i++;
-			}
-			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
-				temp[varNameLen] = fileData[i];
-				varNameLen++;
-				i++;
-			}
-			temp[varNameLen+1] = 0;
-			fprintf(stdout,"%s",temp);
-			fprintf(stdout,">\n");
-		}
-		if(memcmp(fileData+i,keyword[4],4) == 0) {
-			fprintf(stdout,"BYTE <");
-			i += 4;
-			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
-				i++;
-			}
-			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
-				temp[varNameLen] = fileData[i];
-				varNameLen++;
-				i++;
-			}
-			temp[varNameLen+1] = 0;
-			fprintf(stdout,"%s",temp);
-			fprintf(stdout,">\n");
-		}
-		if(memcmp(fileData+i,keyword[5],4) == 0) {
-			fprintf(stdout,"WORD <");
-			i += 4;
-			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
-				i++;
-			}
-			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
-				temp[varNameLen] = fileData[i];
-				varNameLen++;
-				i++;
-			}
-			temp[varNameLen+1] = 0;
-			fprintf(stdout,"%s",temp);
-			fprintf(stdout,">\n");
-		}
-		if(memcmp(fileData+i,keyword[6],5) == 0) {
-			fprintf(stdout,"DWORD <");
-			i += 5;
-			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
-				i++;
-			}
-			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
-				temp[varNameLen] = fileData[i];
-				varNameLen++;
-				i++;
-			}
-			temp[varNameLen+1] = 0;
-			fprintf(stdout,"%s",temp);
-			fprintf(stdout,">\n");
-		}
-		if(memcmp(fileData+i,keyword[7],5) == 0) {
-			fprintf(stdout,"QWORD <");
-			i += 5;
-			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
-				i++;
-			}
-			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
-				temp[varNameLen] = fileData[i];
-				varNameLen++;
-				i++;
-			}
-			temp[varNameLen+1] = 0;
-			fprintf(stdout,"%s",temp);
-			fprintf(stdout,">\n");
-		}
-		if(memcmp(fileData+i,keyword[8],7) == 0) {
-			fprintf(stdout,"ROUTINE <");
+		if(memcmp(fileData+i,keyword[8],strlen(keyword[8])) == 0) {
+			fprintf(stdout,"%s <",keyword[8]);
 			i += 7;
 			varNameLen = 0;
+			paramLen = 0;
 			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
 			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
 				if(memcmp(fileData+i,token[4],1) == 0) { /*print function params*/
-					fprintf(stdout,"PARAMS > (");
+					fprintf(stdout,"parameters >>> (");
 					i++;
-					paramLen = 0;
+					/*paramLen = 0;*/
 					while(memcmp(fileData+i,token[5],1) != 0) {
 						while(memcmp(fileData+i,token[7],1) == 0) { /*skip whitespaces*/
 							i++;
@@ -513,7 +652,7 @@ int main(int argc, char * argv[]) {
 					}
 					i++; /*skip the )*/
 					fprintf(stdout,"%s",temp_param);
-					fprintf(stdout,") FOR FUNCTION ");
+					fprintf(stdout,") for function: ");
 					goto functionBody;
 				}
 				temp[varNameLen] = fileData[i];
@@ -523,22 +662,41 @@ int main(int argc, char * argv[]) {
 			functionBody:
 			temp[varNameLen+1] = 0;
 			fprintf(stdout,"%s",temp);
+			
+			/*Save the function in the Function Glossary along with its parameters*/
+			if(currentFunctionGlossaryPointer > functionGlossaryMaxSize-strlen(temp)-strlen(temp_param)-2) {
+				fprintf(stderr,"Overpassed function glossary size");
+				goto end;
+			}
+			memcpy(functionGlossary+currentFunctionGlossaryPointer,temp,strlen(temp));
+			currentFunctionGlossaryPointer += strlen(temp); /*Copy function name into glossary*/
+			
+			functionGlossary[currentFunctionGlossaryPointer] = ':';
+			currentFunctionGlossaryPointer++; /*Add a delimitator : for recognizing functions and params*/
+			
+			memcpy(functionGlossary+currentFunctionGlossaryPointer,temp_param,strlen(temp_param));
+			currentFunctionGlossaryPointer += strlen(temp_param); /*Copy parameters into glossary*/
+			
+			functionGlossary[currentFunctionGlossaryPointer] = '\n';
+			currentFunctionGlossaryPointer++; /*Add a delimitator \n for separating individual functions*/
 			fprintf(stdout,">\n");
 			
 			/*Write the temp label with the underscore to the out file*/
 			/*this can create a small routine*/
-			if(platformId == 10) {
+			if(platformId == 5) {
+				fprintf(out,"_%s:\n",temp);
+			} else if(platformId == 10) {
 				fprintf(out,"_%s:\n",temp);
 			}
 			
 			/*Decompose Function into individual childrens*/
 			temp_decompose = strtok(temp_param,",");
 			if(temp_decompose == NULL) {
-				fprintf(stdout,"\t;no params\n");
+				fprintf(stdout,"\tno parameters\n");
 			}
 			while(temp_decompose != NULL) {
 				fprintf(stdout,"%s\t",temp_decompose);
-				fprintf(stdout,"\t;param _%s\n",temp_decompose);
+				fprintf(stdout,"\tparameter %s\n",temp_decompose);
 				temp_decompose = strtok(NULL,",");
 			}
 			fprintf(stdout,"\n");
@@ -549,605 +707,30 @@ int main(int argc, char * argv[]) {
 				i++;
 			}
 			i++;
-			while(memcmp(fileData+i,token[3],1) != 0) { /*parse until closing brace*/
-				/*STATEMENT MINI-PROCESSOR*/
-				while(memcmp(fileData+i,token[7],1) == 0) { /*skip whitespaces*/
-					i++;
-				}
-				statementLen = 0;
-				while(memcmp(fileData+i,token[6],1) != 0) { /*grab all name after whitespace before ;*/
-					temp_statement[statementLen] = fileData[i];
-					statementLen++;
-					i++;
+			while(memcmp(fileData+i,token[3],1) != 0 && i <= fileSize) { /*parse until closing brace*/
+				doStatementParse();
+				if(streamEnd == 1) {
+					fprintf(stdout,"end of data\n");
+					goto streamEnded;
 				}
 				i++;
-				temp_statement[statementLen] = 0;
-				fprintf(stdout,"STATEMENT ON SCOPE %s : %s\n",temp,temp_statement);
-				/*STATEMENT POST-PROCESSOR*/
-				/*Write statement into an assembly thing*/
-				/*RETURN*/
-				if(memcmp(temp_statement,builtStatement[0],strlen(builtStatement[0])) == 0) {
-					if(platformId == 5) {
-						fprintf(out,"\trts\n");
-					}
-					if(platformId == 10) {
-						fprintf(out,"\tret\n");
-					}
+				if(i > fileSize) {
+					fprintf(stderr,"error: buffer overflow\n");
+					goto end;
 				}
-				/*HALT*/
-				if(memcmp(temp_statement,builtStatement[8],strlen(builtStatement[8])) == 0) {
-					if(platformId == 10) {
-						fprintf(out,"\thlt\n");
-					}
-				}
-				/*COPY*/
-				if(memcmp(temp_statement,builtStatement[2],strlen(builtStatement[2])) == 0) {
-					/*get operands A and B*/
-					/*operand A*/
-					statementSecondLen = 1;
-					statementSecondLenSecond = 0;
-					while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ',') {
-						temp_operand[0][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
-						statementSecondLen++;
-						statementSecondLenSecond++;
-					}
-					temp_operand[0][statementSecondLenSecond] = '\0';
-					
-					statementSecondLen++;
-					
-					statementSecondLenSecond = 0;
-					while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ')') {
-						temp_operand[1][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
-						statementSecondLen++;
-						statementSecondLenSecond++;
-					}
-					temp_operand[1][statementSecondLenSecond] = '\0';
-					
-					fprintf(stdout,"\t%s %s\n",temp_operand[0],temp_operand[1]);
-					
-					/*Check for registers*/
-					if(platformId == 10) {
-						fprintf(out,"\tmov ");
-						for(i3 = 0; i3 < 16; i3++) {
-							if(memcmp(temp_operand[0],registerName[i3],strlen(registerName[i3])) == 0) {
-								fprintf(out,reg_x86_rep[i3]);
-								isReg = 1;
-							}
-						}
-						if(isReg == 0) {
-							fprintf(out,"%s",temp_operand[0]);
-						}
-						isReg = 0;
-						fprintf(out,",");
-						for(i3 = 0; i3 < 16; i3++) {
-							if(memcmp(temp_operand[1],registerName[i3],strlen(registerName[i3])) == 0) {
-								fprintf(out,reg_x86_rep[i3]);
-								isReg = 1;
-							}
-						}
-						if(isReg == 0) {
-							fprintf(out,"%s",temp_operand[1]);
-						}
-						isReg = 0;
-						
-						fprintf(out,"\n");
-					}
-				}
-				
-				/*COMPARE*/
-				if(memcmp(temp_statement,builtStatement[1],strlen(builtStatement[1])) == 0) {
-					/*get operands A and B*/
-					/*operand A*/
-					statementSecondLen = 1;
-					statementSecondLenSecond = 0;
-					while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ',') {
-						temp_operand[0][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
-						statementSecondLen++;
-						statementSecondLenSecond++;
-					}
-					temp_operand[0][statementSecondLenSecond] = '\0';
-					
-					statementSecondLen++;
-					
-					statementSecondLenSecond = 0;
-					while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ')') {
-						temp_operand[1][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
-						statementSecondLen++;
-						statementSecondLenSecond++;
-					}
-					temp_operand[1][statementSecondLenSecond] = '\0';
-					
-					fprintf(stdout,"\t%s %s\n",temp_operand[0],temp_operand[1]);
-					
-					/*Check for registers*/
-					if(platformId == 10) {
-						fprintf(out,"\tcmp ");
-						if(memcmp(temp_operand[0],registerName[0],strlen(registerName[0])) == 0) { /*ra8*/
-							fprintf(out,"al");
-						} else if(memcmp(temp_operand[0],registerName[1],strlen(registerName[1])) == 0) { /*ra16*/
-							fprintf(out,"ax");
-						} else if(memcmp(temp_operand[0],registerName[2],strlen(registerName[2])) == 0) { /*ra32*/
-							fprintf(out,"eax");
-						} else if(memcmp(temp_operand[0],registerName[3],strlen(registerName[3])) == 0) { /*ra64*/
-							fprintf(out,"rax");
-						} else if(memcmp(temp_operand[0],registerName[4],strlen(registerName[4])) == 0) { /*rb8*/
-							fprintf(out,"bl");
-						} else if(memcmp(temp_operand[0],registerName[5],strlen(registerName[5])) == 0) { /*rb16*/
-							fprintf(out,"bx");
-						} else if(memcmp(temp_operand[0],registerName[6],strlen(registerName[6])) == 0) { /*rb32*/
-							fprintf(out,"ebx");
-						} else if(memcmp(temp_operand[0],registerName[7],strlen(registerName[7])) == 0) { /*rb64*/
-							fprintf(out,"rbx");
-						} else if(memcmp(temp_operand[0],registerName[8],strlen(registerName[8])) == 0) { /*rc8*/
-							fprintf(out,"cl");
-						} else if(memcmp(temp_operand[0],registerName[9],strlen(registerName[9])) == 0) { /*rc16*/
-							fprintf(out,"cx");
-						} else if(memcmp(temp_operand[0],registerName[10],strlen(registerName[10])) == 0) { /*rc32*/
-							fprintf(out,"ecx");
-						} else if(memcmp(temp_operand[0],registerName[11],strlen(registerName[11])) == 0) { /*rc64*/
-							fprintf(out,"rcx");
-						} else if(memcmp(temp_operand[0],registerName[12],strlen(registerName[12])) == 0) { /*rd8*/
-							fprintf(out,"dl");
-						} else if(memcmp(temp_operand[0],registerName[13],strlen(registerName[13])) == 0) { /*rd16*/
-							fprintf(out,"dx");
-						} else if(memcmp(temp_operand[0],registerName[14],strlen(registerName[14])) == 0) { /*rd32*/
-							fprintf(out,"edx");
-						} else if(memcmp(temp_operand[0],registerName[15],strlen(registerName[15])) == 0) { /*rd64*/
-							fprintf(out,"rdx");
-						} else if(memcmp(temp_operand[0],registerName[16],strlen(registerName[16])) == 0) { /*raa16*/
-							fprintf(out,"[al]");
-						} else if(memcmp(temp_operand[0],registerName[17],strlen(registerName[17])) == 0) { /*raa16*/
-							fprintf(out,"[ax]");
-						} else if(memcmp(temp_operand[0],registerName[18],strlen(registerName[18])) == 0) { /*raa32*/
-							fprintf(out,"[eax]");
-						} else if(memcmp(temp_operand[0],registerName[19],strlen(registerName[19])) == 0) { /*raa64*/
-							fprintf(out,"[rax]");
-						}  else if(memcmp(temp_operand[0],registerName[20],strlen(registerName[20])) == 0) { /*rab8*/
-							fprintf(out,"[bl]");
-						} else if(memcmp(temp_operand[0],registerName[21],strlen(registerName[21])) == 0) { /*rab16*/
-							fprintf(out,"[bx]");
-						} else if(memcmp(temp_operand[0],registerName[22],strlen(registerName[22])) == 0) { /*rab32*/
-							fprintf(out,"[ebx]");
-						} else if(memcmp(temp_operand[0],registerName[23],strlen(registerName[23])) == 0) { /*rab64*/
-							fprintf(out,"[rbx]");
-						} else if(memcmp(temp_operand[0],registerName[24],strlen(registerName[24])) == 0) { /*rac8*/
-							fprintf(out,"[cl]");
-						} else if(memcmp(temp_operand[0],registerName[25],strlen(registerName[25])) == 0) { /*rac16*/
-							fprintf(out,"[cx]");
-						} else if(memcmp(temp_operand[0],registerName[26],strlen(registerName[26])) == 0) { /*rac32*/
-							fprintf(out,"[ecx]");
-						} else if(memcmp(temp_operand[0],registerName[27],strlen(registerName[27])) == 0) { /*rac64*/
-							fprintf(out,"[rcx]");
-						} else if(memcmp(temp_operand[0],registerName[28],strlen(registerName[28])) == 0) { /*rad8*/
-							fprintf(out,"[dl]");
-						} else if(memcmp(temp_operand[0],registerName[29],strlen(registerName[29])) == 0) { /*rad16*/
-							fprintf(out,"[dx]");
-						} else if(memcmp(temp_operand[0],registerName[30],strlen(registerName[30])) == 0) { /*rad32*/
-							fprintf(out,"[edx]");
-						} else if(memcmp(temp_operand[0],registerName[31],strlen(registerName[31])) == 0) { /*rad64*/
-							fprintf(out,"[rdx]");
-						} else {
-							fprintf(out,"%s",temp_operand[0]);
-						}
-						fprintf(out,",");
-						if(memcmp(temp_operand[1],registerName[0],strlen(registerName[0])) == 0) { /*ra8*/
-							fprintf(out,"al");
-						} else if(memcmp(temp_operand[1],registerName[1],strlen(registerName[1])) == 0) { /*ra16*/
-							fprintf(out,"ax");
-						} else if(memcmp(temp_operand[1],registerName[2],strlen(registerName[2])) == 0) { /*ra32*/
-							fprintf(out,"eax");
-						} else if(memcmp(temp_operand[1],registerName[3],strlen(registerName[3])) == 0) { /*ra64*/
-							fprintf(out,"rax");
-						} else if(memcmp(temp_operand[1],registerName[4],strlen(registerName[4])) == 0) { /*rb8*/
-							fprintf(out,"bl");
-						} else if(memcmp(temp_operand[1],registerName[5],strlen(registerName[5])) == 0) { /*rb16*/
-							fprintf(out,"bx");
-						} else if(memcmp(temp_operand[1],registerName[6],strlen(registerName[6])) == 0) { /*rb32*/
-							fprintf(out,"ebx");
-						} else if(memcmp(temp_operand[1],registerName[7],strlen(registerName[7])) == 0) { /*rb64*/
-							fprintf(out,"rbx");
-						} else if(memcmp(temp_operand[1],registerName[8],strlen(registerName[8])) == 0) { /*rc8*/
-							fprintf(out,"cl");
-						} else if(memcmp(temp_operand[1],registerName[9],strlen(registerName[9])) == 0) { /*rc16*/
-							fprintf(out,"cx");
-						} else if(memcmp(temp_operand[1],registerName[10],strlen(registerName[10])) == 0) { /*rc32*/
-							fprintf(out,"ecx");
-						} else if(memcmp(temp_operand[1],registerName[11],strlen(registerName[11])) == 0) { /*rc64*/
-							fprintf(out,"rcx");
-						} else if(memcmp(temp_operand[1],registerName[12],strlen(registerName[12])) == 0) { /*rd8*/
-							fprintf(out,"dl");
-						} else if(memcmp(temp_operand[1],registerName[13],strlen(registerName[13])) == 0) { /*rd16*/
-							fprintf(out,"dx");
-						} else if(memcmp(temp_operand[1],registerName[14],strlen(registerName[14])) == 0) { /*rd32*/
-							fprintf(out,"edx");
-						} else if(memcmp(temp_operand[1],registerName[15],strlen(registerName[15])) == 0) { /*rd64*/
-							fprintf(out,"rdx");
-						} else if(memcmp(temp_operand[1],registerName[16],strlen(registerName[16])) == 0) { /*raa16*/
-							fprintf(out,"[al]");
-						} else if(memcmp(temp_operand[1],registerName[17],strlen(registerName[17])) == 0) { /*raa16*/
-							fprintf(out,"[ax]");
-						} else if(memcmp(temp_operand[1],registerName[18],strlen(registerName[18])) == 0) { /*raa32*/
-							fprintf(out,"[eax]");
-						} else if(memcmp(temp_operand[1],registerName[19],strlen(registerName[19])) == 0) { /*raa64*/
-							fprintf(out,"[rax]");
-						}  else if(memcmp(temp_operand[1],registerName[20],strlen(registerName[20])) == 0) { /*rab8*/
-							fprintf(out,"[bl]");
-						} else if(memcmp(temp_operand[1],registerName[21],strlen(registerName[21])) == 0) { /*rab16*/
-							fprintf(out,"[bx]");
-						} else if(memcmp(temp_operand[1],registerName[22],strlen(registerName[22])) == 0) { /*rab32*/
-							fprintf(out,"[ebx]");
-						} else if(memcmp(temp_operand[1],registerName[23],strlen(registerName[23])) == 0) { /*rab64*/
-							fprintf(out,"[rbx]");
-						} else if(memcmp(temp_operand[1],registerName[24],strlen(registerName[24])) == 0) { /*rac8*/
-							fprintf(out,"[cl]");
-						} else if(memcmp(temp_operand[1],registerName[25],strlen(registerName[25])) == 0) { /*rac16*/
-							fprintf(out,"[cx]");
-						} else if(memcmp(temp_operand[1],registerName[26],strlen(registerName[26])) == 0) { /*rac32*/
-							fprintf(out,"[ecx]");
-						} else if(memcmp(temp_operand[1],registerName[27],strlen(registerName[27])) == 0) { /*rac64*/
-							fprintf(out,"[rcx]");
-						} else if(memcmp(temp_operand[1],registerName[28],strlen(registerName[28])) == 0) { /*rad8*/
-							fprintf(out,"[dl]");
-						} else if(memcmp(temp_operand[1],registerName[29],strlen(registerName[29])) == 0) { /*rad16*/
-							fprintf(out,"[dx]");
-						} else if(memcmp(temp_operand[1],registerName[30],strlen(registerName[30])) == 0) { /*rad32*/
-							fprintf(out,"[edx]");
-						} else if(memcmp(temp_operand[1],registerName[31],strlen(registerName[31])) == 0) { /*rad64*/
-							fprintf(out,"[rdx]");
-						} else {
-							fprintf(out,"%s",temp_operand[1]);
-						}
-						
-						fprintf(out,"\n");
-					}
-				}
-				
-				/*XOR*/
-				if(memcmp(temp_statement,builtStatement[3],strlen(builtStatement[3])) == 0) {
-					/*get operands A and B*/
-					/*operand A*/
-					statementSecondLen = 1;
-					statementSecondLenSecond = 0;
-					while(temp_statement[strlen(builtStatement[3])+statementSecondLen] != ',') {
-						temp_operand[0][statementSecondLenSecond] = temp_statement[strlen(builtStatement[3])+statementSecondLen]; /*skip STATEMENT and (*/
-						statementSecondLen++;
-						statementSecondLenSecond++;
-					}
-					temp_operand[0][statementSecondLenSecond] = '\0';
-					
-					statementSecondLen++;
-					
-					statementSecondLenSecond = 0;
-					while(temp_statement[strlen(builtStatement[3])+statementSecondLen] != ')') {
-						temp_operand[1][statementSecondLenSecond] = temp_statement[strlen(builtStatement[3])+statementSecondLen]; /*skip STATEMENT and (*/
-						statementSecondLen++;
-						statementSecondLenSecond++;
-					}
-					temp_operand[1][statementSecondLenSecond] = '\0';
-					
-					fprintf(stdout,"\t%s %s\n",temp_operand[0],temp_operand[1]);
-					
-					/*Check for registers*/
-					if(platformId == 10) {
-						fprintf(out,"\txor ");
-						if(memcmp(temp_operand[0],registerName[0],strlen(registerName[0])) == 0) { /*ra8*/
-							fprintf(out,"al");
-						} else if(memcmp(temp_operand[0],registerName[1],strlen(registerName[1])) == 0) { /*ra16*/
-							fprintf(out,"ax");
-						} else if(memcmp(temp_operand[0],registerName[2],strlen(registerName[2])) == 0) { /*ra32*/
-							fprintf(out,"eax");
-						} else if(memcmp(temp_operand[0],registerName[3],strlen(registerName[3])) == 0) { /*ra64*/
-							fprintf(out,"rax");
-						} else if(memcmp(temp_operand[0],registerName[4],strlen(registerName[4])) == 0) { /*rb8*/
-							fprintf(out,"bl");
-						} else if(memcmp(temp_operand[0],registerName[5],strlen(registerName[5])) == 0) { /*rb16*/
-							fprintf(out,"bx");
-						} else if(memcmp(temp_operand[0],registerName[6],strlen(registerName[6])) == 0) { /*rb32*/
-							fprintf(out,"ebx");
-						} else if(memcmp(temp_operand[0],registerName[7],strlen(registerName[7])) == 0) { /*rb64*/
-							fprintf(out,"rbx");
-						} else if(memcmp(temp_operand[0],registerName[8],strlen(registerName[8])) == 0) { /*rc8*/
-							fprintf(out,"cl");
-						} else if(memcmp(temp_operand[0],registerName[9],strlen(registerName[9])) == 0) { /*rc16*/
-							fprintf(out,"cx");
-						} else if(memcmp(temp_operand[0],registerName[10],strlen(registerName[10])) == 0) { /*rc32*/
-							fprintf(out,"ecx");
-						} else if(memcmp(temp_operand[0],registerName[11],strlen(registerName[11])) == 0) { /*rc64*/
-							fprintf(out,"rcx");
-						} else if(memcmp(temp_operand[0],registerName[12],strlen(registerName[12])) == 0) { /*rd8*/
-							fprintf(out,"dl");
-						} else if(memcmp(temp_operand[0],registerName[13],strlen(registerName[13])) == 0) { /*rd16*/
-							fprintf(out,"dx");
-						} else if(memcmp(temp_operand[0],registerName[14],strlen(registerName[14])) == 0) { /*rd32*/
-							fprintf(out,"edx");
-						} else if(memcmp(temp_operand[0],registerName[15],strlen(registerName[15])) == 0) { /*rd64*/
-							fprintf(out,"rdx");
-						} else if(memcmp(temp_operand[0],registerName[16],strlen(registerName[16])) == 0) { /*raa16*/
-							fprintf(out,"[al]");
-						} else if(memcmp(temp_operand[0],registerName[17],strlen(registerName[17])) == 0) { /*raa16*/
-							fprintf(out,"[ax]");
-						} else if(memcmp(temp_operand[0],registerName[18],strlen(registerName[18])) == 0) { /*raa32*/
-							fprintf(out,"[eax]");
-						} else if(memcmp(temp_operand[0],registerName[19],strlen(registerName[19])) == 0) { /*raa64*/
-							fprintf(out,"[rax]");
-						}  else if(memcmp(temp_operand[0],registerName[20],strlen(registerName[20])) == 0) { /*rab8*/
-							fprintf(out,"[bl]");
-						} else if(memcmp(temp_operand[0],registerName[21],strlen(registerName[21])) == 0) { /*rab16*/
-							fprintf(out,"[bx]");
-						} else if(memcmp(temp_operand[0],registerName[22],strlen(registerName[22])) == 0) { /*rab32*/
-							fprintf(out,"[ebx]");
-						} else if(memcmp(temp_operand[0],registerName[23],strlen(registerName[23])) == 0) { /*rab64*/
-							fprintf(out,"[rbx]");
-						} else if(memcmp(temp_operand[0],registerName[24],strlen(registerName[24])) == 0) { /*rac8*/
-							fprintf(out,"[cl]");
-						} else if(memcmp(temp_operand[0],registerName[25],strlen(registerName[25])) == 0) { /*rac16*/
-							fprintf(out,"[cx]");
-						} else if(memcmp(temp_operand[0],registerName[26],strlen(registerName[26])) == 0) { /*rac32*/
-							fprintf(out,"[ecx]");
-						} else if(memcmp(temp_operand[0],registerName[27],strlen(registerName[27])) == 0) { /*rac64*/
-							fprintf(out,"[rcx]");
-						} else if(memcmp(temp_operand[0],registerName[28],strlen(registerName[28])) == 0) { /*rad8*/
-							fprintf(out,"[dl]");
-						} else if(memcmp(temp_operand[0],registerName[29],strlen(registerName[29])) == 0) { /*rad16*/
-							fprintf(out,"[dx]");
-						} else if(memcmp(temp_operand[0],registerName[30],strlen(registerName[30])) == 0) { /*rad32*/
-							fprintf(out,"[edx]");
-						} else if(memcmp(temp_operand[0],registerName[31],strlen(registerName[31])) == 0) { /*rad64*/
-							fprintf(out,"[rdx]");
-						} else {
-							fprintf(out,"%s",temp_operand[0]);
-						}
-						fprintf(out,",");
-						if(memcmp(temp_operand[1],registerName[0],strlen(registerName[0])) == 0) { /*ra8*/
-							fprintf(out,"al");
-						} else if(memcmp(temp_operand[1],registerName[1],strlen(registerName[1])) == 0) { /*ra16*/
-							fprintf(out,"ax");
-						} else if(memcmp(temp_operand[1],registerName[2],strlen(registerName[2])) == 0) { /*ra32*/
-							fprintf(out,"eax");
-						} else if(memcmp(temp_operand[1],registerName[3],strlen(registerName[3])) == 0) { /*ra64*/
-							fprintf(out,"rax");
-						} else if(memcmp(temp_operand[1],registerName[4],strlen(registerName[4])) == 0) { /*rb8*/
-							fprintf(out,"bl");
-						} else if(memcmp(temp_operand[1],registerName[5],strlen(registerName[5])) == 0) { /*rb16*/
-							fprintf(out,"bx");
-						} else if(memcmp(temp_operand[1],registerName[6],strlen(registerName[6])) == 0) { /*rb32*/
-							fprintf(out,"ebx");
-						} else if(memcmp(temp_operand[1],registerName[7],strlen(registerName[7])) == 0) { /*rb64*/
-							fprintf(out,"rbx");
-						} else if(memcmp(temp_operand[1],registerName[8],strlen(registerName[8])) == 0) { /*rc8*/
-							fprintf(out,"cl");
-						} else if(memcmp(temp_operand[1],registerName[9],strlen(registerName[9])) == 0) { /*rc16*/
-							fprintf(out,"cx");
-						} else if(memcmp(temp_operand[1],registerName[10],strlen(registerName[10])) == 0) { /*rc32*/
-							fprintf(out,"ecx");
-						} else if(memcmp(temp_operand[1],registerName[11],strlen(registerName[11])) == 0) { /*rc64*/
-							fprintf(out,"rcx");
-						} else if(memcmp(temp_operand[1],registerName[12],strlen(registerName[12])) == 0) { /*rd8*/
-							fprintf(out,"dl");
-						} else if(memcmp(temp_operand[1],registerName[13],strlen(registerName[13])) == 0) { /*rd16*/
-							fprintf(out,"dx");
-						} else if(memcmp(temp_operand[1],registerName[14],strlen(registerName[14])) == 0) { /*rd32*/
-							fprintf(out,"edx");
-						} else if(memcmp(temp_operand[1],registerName[15],strlen(registerName[15])) == 0) { /*rd64*/
-							fprintf(out,"rdx");
-						} else if(memcmp(temp_operand[1],registerName[16],strlen(registerName[16])) == 0) { /*raa16*/
-							fprintf(out,"[al]");
-						} else if(memcmp(temp_operand[1],registerName[17],strlen(registerName[17])) == 0) { /*raa16*/
-							fprintf(out,"[ax]");
-						} else if(memcmp(temp_operand[1],registerName[18],strlen(registerName[18])) == 0) { /*raa32*/
-							fprintf(out,"[eax]");
-						} else if(memcmp(temp_operand[1],registerName[19],strlen(registerName[19])) == 0) { /*raa64*/
-							fprintf(out,"[rax]");
-						}  else if(memcmp(temp_operand[1],registerName[20],strlen(registerName[20])) == 0) { /*rab8*/
-							fprintf(out,"[bl]");
-						} else if(memcmp(temp_operand[1],registerName[21],strlen(registerName[21])) == 0) { /*rab16*/
-							fprintf(out,"[bx]");
-						} else if(memcmp(temp_operand[1],registerName[22],strlen(registerName[22])) == 0) { /*rab32*/
-							fprintf(out,"[ebx]");
-						} else if(memcmp(temp_operand[1],registerName[23],strlen(registerName[23])) == 0) { /*rab64*/
-							fprintf(out,"[rbx]");
-						} else if(memcmp(temp_operand[1],registerName[24],strlen(registerName[24])) == 0) { /*rac8*/
-							fprintf(out,"[cl]");
-						} else if(memcmp(temp_operand[1],registerName[25],strlen(registerName[25])) == 0) { /*rac16*/
-							fprintf(out,"[cx]");
-						} else if(memcmp(temp_operand[1],registerName[26],strlen(registerName[26])) == 0) { /*rac32*/
-							fprintf(out,"[ecx]");
-						} else if(memcmp(temp_operand[1],registerName[27],strlen(registerName[27])) == 0) { /*rac64*/
-							fprintf(out,"[rcx]");
-						} else if(memcmp(temp_operand[1],registerName[28],strlen(registerName[28])) == 0) { /*rad8*/
-							fprintf(out,"[dl]");
-						} else if(memcmp(temp_operand[1],registerName[29],strlen(registerName[29])) == 0) { /*rad16*/
-							fprintf(out,"[dx]");
-						} else if(memcmp(temp_operand[1],registerName[30],strlen(registerName[30])) == 0) { /*rad32*/
-							fprintf(out,"[edx]");
-						} else if(memcmp(temp_operand[1],registerName[31],strlen(registerName[31])) == 0) { /*rad64*/
-							fprintf(out,"[rdx]");
-						} else {
-							fprintf(out,"%s",temp_operand[1]);
-						}
-						
-						fprintf(out,"\n");
-					}
-				}
-				
-				/*OR*/
-				if(memcmp(temp_statement,builtStatement[4],strlen(builtStatement[4])) == 0) {
-					/*get operands A and B*/
-					/*operand A*/
-					statementSecondLen = 1;
-					statementSecondLenSecond = 0;
-					while(temp_statement[strlen(builtStatement[4])+statementSecondLen] != ',') {
-						temp_operand[0][statementSecondLenSecond] = temp_statement[strlen(builtStatement[4])+statementSecondLen]; /*skip STATEMENT and (*/
-						statementSecondLen++;
-						statementSecondLenSecond++;
-					}
-					temp_operand[0][statementSecondLenSecond] = '\0';
-					
-					statementSecondLen++;
-					
-					statementSecondLenSecond = 0;
-					while(temp_statement[strlen(builtStatement[4])+statementSecondLen] != ')') {
-						temp_operand[1][statementSecondLenSecond] = temp_statement[strlen(builtStatement[4])+statementSecondLen]; /*skip STATEMENT and (*/
-						statementSecondLen++;
-						statementSecondLenSecond++;
-					}
-					temp_operand[1][statementSecondLenSecond] = '\0';
-					
-					fprintf(stdout,"\t%s %s\n",temp_operand[0],temp_operand[1]);
-					
-					/*Check for registers*/
-					if(platformId == 10) {
-						fprintf(out,"\tor ");
-						if(memcmp(temp_operand[0],registerName[0],strlen(registerName[0])) == 0) { /*ra8*/
-							fprintf(out,"al");
-						} else if(memcmp(temp_operand[0],registerName[1],strlen(registerName[1])) == 0) { /*ra16*/
-							fprintf(out,"ax");
-						} else if(memcmp(temp_operand[0],registerName[2],strlen(registerName[2])) == 0) { /*ra32*/
-							fprintf(out,"eax");
-						} else if(memcmp(temp_operand[0],registerName[3],strlen(registerName[3])) == 0) { /*ra64*/
-							fprintf(out,"rax");
-						} else if(memcmp(temp_operand[0],registerName[4],strlen(registerName[4])) == 0) { /*rb8*/
-							fprintf(out,"bl");
-						} else if(memcmp(temp_operand[0],registerName[5],strlen(registerName[5])) == 0) { /*rb16*/
-							fprintf(out,"bx");
-						} else if(memcmp(temp_operand[0],registerName[6],strlen(registerName[6])) == 0) { /*rb32*/
-							fprintf(out,"ebx");
-						} else if(memcmp(temp_operand[0],registerName[7],strlen(registerName[7])) == 0) { /*rb64*/
-							fprintf(out,"rbx");
-						} else if(memcmp(temp_operand[0],registerName[8],strlen(registerName[8])) == 0) { /*rc8*/
-							fprintf(out,"cl");
-						} else if(memcmp(temp_operand[0],registerName[9],strlen(registerName[9])) == 0) { /*rc16*/
-							fprintf(out,"cx");
-						} else if(memcmp(temp_operand[0],registerName[10],strlen(registerName[10])) == 0) { /*rc32*/
-							fprintf(out,"ecx");
-						} else if(memcmp(temp_operand[0],registerName[11],strlen(registerName[11])) == 0) { /*rc64*/
-							fprintf(out,"rcx");
-						} else if(memcmp(temp_operand[0],registerName[12],strlen(registerName[12])) == 0) { /*rd8*/
-							fprintf(out,"dl");
-						} else if(memcmp(temp_operand[0],registerName[13],strlen(registerName[13])) == 0) { /*rd16*/
-							fprintf(out,"dx");
-						} else if(memcmp(temp_operand[0],registerName[14],strlen(registerName[14])) == 0) { /*rd32*/
-							fprintf(out,"edx");
-						} else if(memcmp(temp_operand[0],registerName[15],strlen(registerName[15])) == 0) { /*rd64*/
-							fprintf(out,"rdx");
-						} else if(memcmp(temp_operand[0],registerName[16],strlen(registerName[16])) == 0) { /*raa16*/
-							fprintf(out,"[al]");
-						} else if(memcmp(temp_operand[0],registerName[17],strlen(registerName[17])) == 0) { /*raa16*/
-							fprintf(out,"[ax]");
-						} else if(memcmp(temp_operand[0],registerName[18],strlen(registerName[18])) == 0) { /*raa32*/
-							fprintf(out,"[eax]");
-						} else if(memcmp(temp_operand[0],registerName[19],strlen(registerName[19])) == 0) { /*raa64*/
-							fprintf(out,"[rax]");
-						}  else if(memcmp(temp_operand[0],registerName[20],strlen(registerName[20])) == 0) { /*rab8*/
-							fprintf(out,"[bl]");
-						} else if(memcmp(temp_operand[0],registerName[21],strlen(registerName[21])) == 0) { /*rab16*/
-							fprintf(out,"[bx]");
-						} else if(memcmp(temp_operand[0],registerName[22],strlen(registerName[22])) == 0) { /*rab32*/
-							fprintf(out,"[ebx]");
-						} else if(memcmp(temp_operand[0],registerName[23],strlen(registerName[23])) == 0) { /*rab64*/
-							fprintf(out,"[rbx]");
-						} else if(memcmp(temp_operand[0],registerName[24],strlen(registerName[24])) == 0) { /*rac8*/
-							fprintf(out,"[cl]");
-						} else if(memcmp(temp_operand[0],registerName[25],strlen(registerName[25])) == 0) { /*rac16*/
-							fprintf(out,"[cx]");
-						} else if(memcmp(temp_operand[0],registerName[26],strlen(registerName[26])) == 0) { /*rac32*/
-							fprintf(out,"[ecx]");
-						} else if(memcmp(temp_operand[0],registerName[27],strlen(registerName[27])) == 0) { /*rac64*/
-							fprintf(out,"[rcx]");
-						} else if(memcmp(temp_operand[0],registerName[28],strlen(registerName[28])) == 0) { /*rad8*/
-							fprintf(out,"[dl]");
-						} else if(memcmp(temp_operand[0],registerName[29],strlen(registerName[29])) == 0) { /*rad16*/
-							fprintf(out,"[dx]");
-						} else if(memcmp(temp_operand[0],registerName[30],strlen(registerName[30])) == 0) { /*rad32*/
-							fprintf(out,"[edx]");
-						} else if(memcmp(temp_operand[0],registerName[31],strlen(registerName[31])) == 0) { /*rad64*/
-							fprintf(out,"[rdx]");
-						} else {
-							fprintf(out,"%s",temp_operand[0]);
-						}
-						fprintf(out,",");
-						if(memcmp(temp_operand[1],registerName[0],strlen(registerName[0])) == 0) { /*ra8*/
-							fprintf(out,"al");
-						} else if(memcmp(temp_operand[1],registerName[1],strlen(registerName[1])) == 0) { /*ra16*/
-							fprintf(out,"ax");
-						} else if(memcmp(temp_operand[1],registerName[2],strlen(registerName[2])) == 0) { /*ra32*/
-							fprintf(out,"eax");
-						} else if(memcmp(temp_operand[1],registerName[3],strlen(registerName[3])) == 0) { /*ra64*/
-							fprintf(out,"rax");
-						} else if(memcmp(temp_operand[1],registerName[4],strlen(registerName[4])) == 0) { /*rb8*/
-							fprintf(out,"bl");
-						} else if(memcmp(temp_operand[1],registerName[5],strlen(registerName[5])) == 0) { /*rb16*/
-							fprintf(out,"bx");
-						} else if(memcmp(temp_operand[1],registerName[6],strlen(registerName[6])) == 0) { /*rb32*/
-							fprintf(out,"ebx");
-						} else if(memcmp(temp_operand[1],registerName[7],strlen(registerName[7])) == 0) { /*rb64*/
-							fprintf(out,"rbx");
-						} else if(memcmp(temp_operand[1],registerName[8],strlen(registerName[8])) == 0) { /*rc8*/
-							fprintf(out,"cl");
-						} else if(memcmp(temp_operand[1],registerName[9],strlen(registerName[9])) == 0) { /*rc16*/
-							fprintf(out,"cx");
-						} else if(memcmp(temp_operand[1],registerName[10],strlen(registerName[10])) == 0) { /*rc32*/
-							fprintf(out,"ecx");
-						} else if(memcmp(temp_operand[1],registerName[11],strlen(registerName[11])) == 0) { /*rc64*/
-							fprintf(out,"rcx");
-						} else if(memcmp(temp_operand[1],registerName[12],strlen(registerName[12])) == 0) { /*rd8*/
-							fprintf(out,"dl");
-						} else if(memcmp(temp_operand[1],registerName[13],strlen(registerName[13])) == 0) { /*rd16*/
-							fprintf(out,"dx");
-						} else if(memcmp(temp_operand[1],registerName[14],strlen(registerName[14])) == 0) { /*rd32*/
-							fprintf(out,"edx");
-						} else if(memcmp(temp_operand[1],registerName[15],strlen(registerName[15])) == 0) { /*rd64*/
-							fprintf(out,"rdx");
-						} else if(memcmp(temp_operand[1],registerName[16],strlen(registerName[16])) == 0) { /*raa16*/
-							fprintf(out,"[al]");
-						} else if(memcmp(temp_operand[1],registerName[17],strlen(registerName[17])) == 0) { /*raa16*/
-							fprintf(out,"[ax]");
-						} else if(memcmp(temp_operand[1],registerName[18],strlen(registerName[18])) == 0) { /*raa32*/
-							fprintf(out,"[eax]");
-						} else if(memcmp(temp_operand[1],registerName[19],strlen(registerName[19])) == 0) { /*raa64*/
-							fprintf(out,"[rax]");
-						}  else if(memcmp(temp_operand[1],registerName[20],strlen(registerName[20])) == 0) { /*rab8*/
-							fprintf(out,"[bl]");
-						} else if(memcmp(temp_operand[1],registerName[21],strlen(registerName[21])) == 0) { /*rab16*/
-							fprintf(out,"[bx]");
-						} else if(memcmp(temp_operand[1],registerName[22],strlen(registerName[22])) == 0) { /*rab32*/
-							fprintf(out,"[ebx]");
-						} else if(memcmp(temp_operand[1],registerName[23],strlen(registerName[23])) == 0) { /*rab64*/
-							fprintf(out,"[rbx]");
-						} else if(memcmp(temp_operand[1],registerName[24],strlen(registerName[24])) == 0) { /*rac8*/
-							fprintf(out,"[cl]");
-						} else if(memcmp(temp_operand[1],registerName[25],strlen(registerName[25])) == 0) { /*rac16*/
-							fprintf(out,"[cx]");
-						} else if(memcmp(temp_operand[1],registerName[26],strlen(registerName[26])) == 0) { /*rac32*/
-							fprintf(out,"[ecx]");
-						} else if(memcmp(temp_operand[1],registerName[27],strlen(registerName[27])) == 0) { /*rac64*/
-							fprintf(out,"[rcx]");
-						} else if(memcmp(temp_operand[1],registerName[28],strlen(registerName[28])) == 0) { /*rad8*/
-							fprintf(out,"[dl]");
-						} else if(memcmp(temp_operand[1],registerName[29],strlen(registerName[29])) == 0) { /*rad16*/
-							fprintf(out,"[dx]");
-						} else if(memcmp(temp_operand[1],registerName[30],strlen(registerName[30])) == 0) { /*rad32*/
-							fprintf(out,"[edx]");
-						} else if(memcmp(temp_operand[1],registerName[31],strlen(registerName[31])) == 0) { /*rad64*/
-							fprintf(out,"[rdx]");
-						} else {
-							fprintf(out,"%s",temp_operand[1]);
-						}
-						
-						fprintf(out,"\n");
-					}
-				}
-				
-				i++;
 			}
 		}
 	}
 	
+	streamEnded:
+	fprintf(stdout,"FUNCTION GLOSSARY\n%s\nEND OF FUNCTION GLOSSARY\n",functionGlossary);
 	fprintf(stdout,"---\n%s\n---\n",fileData); /*Print current state of memory*/
 	
 	end:
 	if(in) { fclose(in); }
 	if(out) { fclose(out); }
+	if(temp_decompose != NULL) { free(temp_decompose); }
+	if(functionGlossary != NULL) { free(functionGlossary); }
 	if(inputFile != NULL) { free(inputFile); }
 	if(outputFile != NULL) { free(outputFile); }
 	if(fileData != NULL) { free(fileData); }

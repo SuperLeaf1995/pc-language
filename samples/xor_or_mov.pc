@@ -11,7 +11,7 @@ _entryPoint:
 
 */
 
-routine entryPoint() {
+routine entryPoint(byte a, byte b, byte c) {
 	copy(0,ra8); /*Set AL as 0*/
 	return; /*return to caller*/
 }
