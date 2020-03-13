@@ -7,18 +7,11 @@
 
 _entryPoint:
 	mov al, 0 ;NOT OPTIMIZED
-	xor al, al ;OPTIMIZED
 	ret ;THE RETURN INSTRUCTION
 
 */
 
 routine entryPoint() {
 	copy(0,ra8); /*Set AL as 0*/
-	copy(ra16,ra8);
-	copy(ra8,ra32);
-	copy(ra8,ra8);
-	copy(ra16,ra8);
-	copy(ra8,ra32);
-	copy(ra8,ra8);
 	return; /*return to caller*/
 }

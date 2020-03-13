@@ -1,0 +1,32 @@
+Coding convention
+
+Potato-C is a unique language wich looks like a bad spinoff of C--. Trough
+it is not, and aims to achieve more.
+
+Let's start by setting ra8 to zero.
+
+routine foo() {
+	copy(0,ra8);
+	return;
+}
+
+now ra8 is set to zero.
+Potato-C will transform this code into:
+
+x86
+[section .text]
+
+_foo:
+	mov al, 0
+	ret
+	
+x64
+[section .text]
+_foo:
+	mov al, 0
+	ret
+	
+6502
+_foo:
+	ldx #$0
+	rts

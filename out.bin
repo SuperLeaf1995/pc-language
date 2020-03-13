@@ -2,10 +2,4 @@
 
 _entryPoint:
 	mov 0,al
-	mov ax,al
-	mov al,eax
-	mov al,al
-	mov ax,al
-	mov al,eax
-	mov al,al
 	ret
