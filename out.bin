@@ -1,5 +1,0 @@
-[section .text]
-
-_entryPoint:
-	mov 0,al
-	ret
