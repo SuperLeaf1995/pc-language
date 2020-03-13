@@ -1,31 +1,38 @@
-//Tidal Language Parser, Lexer and Compiler
+/*potato-c Language Parser and Lexer*/
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <memory.h>
 
-//Argument-processor variables
+/*Argument-processor variables*/
 FILE * out;
 FILE * in;
 char * outputFile;
 char * inputFile;
 const char * defaultOutputFileName = "out.bin";
-//File-processor variables
+/*File-processor variables*/
 size_t fileSize;
 char * fileData;
-//Pre-processor variables
+/*Pre-processor variables*/
 size_t commentLen;
-//Lexer variables
+/*Lexer variables*/
 size_t varNameLen;
 size_t paramLen;
+size_t statementLen;
+size_t statementSecondLen;
+size_t statementSecondLenSecond;
 
 char temp[64];
 char temp_param[64];
+char temp_statement[128];
 char * temp_decompose;
+char temp_operand[4][64];
 
 const char* token[] = {
-	"/*", //Multiline comment opening
-	"*/", //Multiline comment closing
-	//Source code-significant tokens
+	"/*", /*Multiline comment opening*/
+	"*/", /*Multiline comment closing*/
+	/*Source code-significant tokens*/
 	"{",
 	"}",
 	"(",
@@ -46,6 +53,37 @@ const char* keyword[] = {
 	"routine"
 };
 
+const char* builtStatement[] = {
+	"return",
+	"compare",
+	"copy",
+	"xor",
+	"or",
+	"and",
+	"shift_left",
+	"shift_right",
+	"halt"
+};
+
+const char* registerName[] = {
+	"ra8",
+	"ra16",
+	"ra32",
+	"ra64",
+	"rb8",
+	"rb16",
+	"rb32",
+	"rb64",
+	"rc8",
+	"rc16",
+	"rc32",
+	"rc64",
+	"rd8",
+	"rd16",
+	"rd32",
+	"rd64",
+};
+
 size_t getfilelen(FILE * _s) {
 	register size_t i = 0;
 	while(fgetc(_s) != EOF) {
@@ -58,30 +96,31 @@ size_t getfilelen(FILE * _s) {
 int main(int argc, char * argv[]) {
 	size_t i;
 	size_t i2;
-	//Argument-processor
-	//Processes the arguments and enables certain functions of the compiler
-	//including warnings
-	if(argc < 1) { //argc 1 is program, so the OS is faulty somehow
+	size_t i3;
+	/*Argument-processor*/
+	/*Processes the arguments and enables certain functions of the compiler*/
+	/*including warnings*/
+	if(argc < 1) { /*argc 1 is program, so the OS is faulty somehow*/
 		fprintf(stderr,"Not engough arguments supplied\n");
 		goto end;
 	}
-	if(argc > 255) { //Do not allow many arguments
+	if(argc > 255) { /*Do not allow many arguments*/
 		fprintf(stderr,"Too many arguments supplied\n");
 		goto end;
 	}
 	
 	for(i = 1; i < argc; i++) {
-		if(strcmp("-Wall",argv[i]) == 0) { //Is -Wall supplied?
+		if(strcmp("-Wall",argv[i]) == 0) { /*Is -Wall supplied?*/
 			fprintf(stdout,"All warnings enabled\n");
-		} else if(strcmp("-o",argv[i]) == 0) { //Explicit output filename
-			i++; //Increment into next argument
-			//If i > argc, then issue error
+		} else if(strcmp("-o",argv[i]) == 0) { /*Explicit output filename*/
+			i++; /*Increment into next argument*/
+			/*If i > argc, then issue error*/
 			if(i > argc) {
 				fprintf(stderr,"Output command was issued, but no file was issued\n");
 				goto end;
 			}
 			fprintf(stdout,"Output file issued was: %s\n",argv[i]);
-			if(outputFile != NULL) { //If file was already issued, skip it!
+			if(outputFile != NULL) { /*If file was already issued, skip it!*/
 				fprintf(stdout,"Output file was already issued\n");
 				goto ignoreOutputFile;
 			}
@@ -93,9 +132,9 @@ int main(int argc, char * argv[]) {
 			memcpy(outputFile,argv[i],strlen(argv[i])+1);
 			ignoreOutputFile:
 			i = i;
-		} else { //input filename (implicit)
+		} else { /*input filename (implicit)*/
 			fprintf(stdout,"Input file issued was: %s\n",argv[i]);
-			if(inputFile != NULL) { //If file was already issued, skip it!
+			if(inputFile != NULL) { /*If file was already issued, skip it!*/
 				fprintf(stdout,"Input file was already issued\n");
 				goto ignoreInputFile;
 			}
@@ -110,7 +149,7 @@ int main(int argc, char * argv[]) {
 		}
 	}
 	
-	if(outputFile == NULL) { //No file was issued
+	if(outputFile == NULL) { /*No file was issued*/
 		outputFile = malloc(strlen(defaultOutputFileName)+1);
 		if(outputFile == NULL) {
 			fprintf(stderr,"Cannot allocate memory for implicit output filename\n");
@@ -120,19 +159,19 @@ int main(int argc, char * argv[]) {
 		fprintf(stdout,"Using implicit output filename: %s\n",outputFile);
 	}
 	
-	out = fopen(outputFile,"wb"); //Open output file in binary mode
-	if(!out) { //Write error
+	out = fopen(outputFile,"wb"); /*Open output file in binary mode*/
+	if(!out) { /*Write error*/
 		fprintf(stderr,"Output file cannot be written\n");
 		goto end;
 	}
-	in = fopen(inputFile,"rt"); //Open input file in text mode
-	if(!in) { //Read error or file does not exist
+	in = fopen(inputFile,"rt"); /*Open input file in text mode*/
+	if(!in) { /*Read error or file does not exist*/
 		fprintf(stderr,"Input file cannot be read\n");
 		goto end;
 	}
 	
-	//File-processor
-	//This processor gets file size and place all data in memory
+	/*File-processor*/
+	/*This processor gets file size and place all data in memory*/
 	fileSize = getfilelen(in);
 	fileData = malloc(fileSize+1);
 	if(fileData == NULL) {
@@ -140,30 +179,30 @@ int main(int argc, char * argv[]) {
 		goto end;
 	}
 	memset(fileData,0,fileSize+1);
-	fread(fileData,sizeof(char),fileSize,in); //Place all data on fileData
+	fread(fileData,sizeof(char),fileSize,in); /*Place all data on fileData*/
 		
-	//Pre-processor
-	//Tidal's pre-processor job is to remove comments
-	//replace tabs with spaces and other "cleanasing" stuff
-	//Replace tabs with spaces
+	/*Pre-processor*/
+	/*potato-c's pre-processor job is to remove comments*/
+	/*replace tabs with spaces and other "cleanasing" stuff*/
+	/*Replace tabs with spaces*/
 	for(i = 0; i < fileSize; i++) {
 		if(fileData[i] == '\t') {
 			fileData[i] = ' ';
 		}
 	}
-	//Remove multi-line comments
+	/*Remove multi-line comments*/
 	for(i = 0; i < fileSize; i++) {
 		if(memcmp(fileData+i,token[0],2) == 0) {
 			commentLen = 0;
 			while(memcmp(fileData+i+commentLen,token[1],2) != 0) {
 				commentLen++;
 			}
-			commentLen += 2; //skip the */ thing
+			commentLen += 2; /*skip the closing comnment thing*/
 			memmove(fileData+i,fileData+i+commentLen,fileSize-i);
 		}
 	}
 	
-	//Remove newlines
+	/*Remove newlines*/
 	for(i = 0; i < fileSize; i++) {
 		if(fileData[i] == '\n' && i2 == 0) {
 			memmove(fileData+i,fileData+i+1,fileSize-i);
@@ -172,17 +211,17 @@ int main(int argc, char * argv[]) {
 		}
 	}
 	
-	//Lexer
-	//List tokens and keywords in the program
+	/*Lexer*/
+	/*List tokens and keywords in the program*/
 	for(i = 0; i < fileSize; i++) {
 		if(memcmp(fileData+i,keyword[0],8) == 0) {
 			fprintf(stdout,"BSS_BYTE <");
 			i += 8;
 			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { //skip any whitespaces
+			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { //get variable name
+			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
 				temp[varNameLen] = fileData[i];
 				varNameLen++;
 				i++;
@@ -195,10 +234,10 @@ int main(int argc, char * argv[]) {
 			fprintf(stdout,"BSS_WORD <");
 			i += 8;
 			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { //skip any whitespaces
+			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { //get variable name
+			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
 				temp[varNameLen] = fileData[i];
 				varNameLen++;
 				i++;
@@ -211,10 +250,10 @@ int main(int argc, char * argv[]) {
 			fprintf(stdout,"BSS_DWORD <");
 			i += 9;
 			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { //skip any whitespaces
+			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { //get variable name
+			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
 				temp[varNameLen] = fileData[i];
 				varNameLen++;
 				i++;
@@ -227,10 +266,10 @@ int main(int argc, char * argv[]) {
 			fprintf(stdout,"BSS_QWORD <");
 			i += 9;
 			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { //skip any whitespaces
+			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { //get variable name
+			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
 				temp[varNameLen] = fileData[i];
 				varNameLen++;
 				i++;
@@ -243,10 +282,10 @@ int main(int argc, char * argv[]) {
 			fprintf(stdout,"BYTE <");
 			i += 4;
 			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { //skip any whitespaces
+			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { //get variable name
+			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
 				temp[varNameLen] = fileData[i];
 				varNameLen++;
 				i++;
@@ -259,10 +298,10 @@ int main(int argc, char * argv[]) {
 			fprintf(stdout,"WORD <");
 			i += 4;
 			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { //skip any whitespaces
+			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { //get variable name
+			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
 				temp[varNameLen] = fileData[i];
 				varNameLen++;
 				i++;
@@ -275,10 +314,10 @@ int main(int argc, char * argv[]) {
 			fprintf(stdout,"DWORD <");
 			i += 5;
 			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { //skip any whitespaces
+			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { //get variable name
+			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
 				temp[varNameLen] = fileData[i];
 				varNameLen++;
 				i++;
@@ -291,10 +330,10 @@ int main(int argc, char * argv[]) {
 			fprintf(stdout,"QWORD <");
 			i += 5;
 			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { //skip any whitespaces
+			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { //get variable name
+			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
 				temp[varNameLen] = fileData[i];
 				varNameLen++;
 				i++;
@@ -307,23 +346,23 @@ int main(int argc, char * argv[]) {
 			fprintf(stdout,"ROUTINE <");
 			i += 7;
 			varNameLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { //skip any whitespaces
+			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { //get variable name
-				if(memcmp(fileData+i,token[4],1) == 0) { //print function params
+			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
+				if(memcmp(fileData+i,token[4],1) == 0) { /*print function params*/
 					fprintf(stdout,"PARAMS > (");
 					i++;
 					paramLen = 0;
 					while(memcmp(fileData+i,token[5],1) != 0) {
-						while(memcmp(fileData+i,token[7],1) == 0) { //skip whitespaces
+						while(memcmp(fileData+i,token[7],1) == 0) { /*skip whitespaces*/
 							i++;
 						}
 						temp_param[paramLen] = fileData[i];
 						paramLen++;
 						i++;
 					}
-					i++; //skip the )
+					i++; /*skip the )*/
 					fprintf(stdout,"%s",temp_param);
 					fprintf(stdout,") FOR FUNCTION ");
 					goto functionBody;
@@ -336,17 +375,95 @@ int main(int argc, char * argv[]) {
 			temp[varNameLen+1] = 0;
 			fprintf(stdout,"%s",temp);
 			fprintf(stdout,">\n");
-			//Decompose Function into individual childrens
+			
+			/*Write the temp label with the underscore to the out file*/
+			/*this can create a small routine*/
+			fprintf(out,"_%s:\n",temp);
+			
+			/*Decompose Function into individual childrens*/
 			temp_decompose = strtok(temp_param,",");
+			if(temp_decompose == NULL) {
+				fprintf(out,"\t;no params\n");
+			}
 			while(temp_decompose != NULL) {
 				fprintf(stdout,"%s\t",temp_decompose);
+				fprintf(out,"\t;param _%s\n",temp_decompose);
 				temp_decompose = strtok(NULL,",");
 			}
 			fprintf(stdout,"\n");
+			
+			/*We now have the function HEADER, lets parse the body and write it
+			accordingly*/
+			while(memcmp(fileData+i,token[2],1) != 0) { /*skip until the open brace*/
+				i++;
+			}
+			i++;
+			while(memcmp(fileData+i,token[3],1) != 0) { /*parse until closing brace*/
+				/*STATEMENT MINI-PROCESSOR*/
+				while(memcmp(fileData+i,token[7],1) == 0) { /*skip whitespaces*/
+					i++;
+				}
+				statementLen = 0;
+				while(memcmp(fileData+i,token[6],1) != 0) { /*grab all name after whitespace before ;*/
+					temp_statement[statementLen] = fileData[i];
+					statementLen++;
+					i++;
+				}
+				i++;
+				temp_statement[statementLen] = 0;
+				fprintf(stdout,"STATEMENT ON SCOPE %s : %s\n",temp,temp_statement);
+				/*STATEMENT POST-PROCESSOR*/
+				/*Write statement into an assembly thing*/
+				/*RETURN*/
+				if(memcmp(temp_statement,builtStatement[0],strlen(builtStatement[0])) == 0) {
+					fprintf(out,"\tret\n");
+				}
+				/*HALT*/
+				if(memcmp(temp_statement,builtStatement[8],strlen(builtStatement[8])) == 0) {
+					fprintf(out,"\thlt\n");
+				}
+				/*COPY*/
+				if(memcmp(temp_statement,builtStatement[2],strlen(builtStatement[2])) == 0) {
+					/*get operands A and B*/
+					/*operand A*/
+					statementSecondLen = 1;
+					statementSecondLenSecond = 0;
+					while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ',') {
+						temp_operand[0][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
+						statementSecondLen++;
+					}
+					statementSecondLen++; /*skip a char , */
+					
+					while(temp_statement[strlen(builtStatement[2])+statementSecondLen] == ' ') {
+						statementSecondLen++; /*skip whitespaces*/
+					}
+					
+					statementSecondLenSecond = 0;
+					while(temp_statement[strlen(builtStatement[2])+statementSecondLen] != ')') {
+						temp_operand[1][statementSecondLenSecond] = temp_statement[strlen(builtStatement[2])+statementSecondLen]; /*skip STATEMENT and (*/
+						statementSecondLen++;
+						statementSecondLenSecond++;
+					}
+					
+					fprintf(out,"\tmov ");
+					
+					/*Check for registers*/
+					for(i3 = 0; i3 < 1; i3++) {
+						if(memcmp(temp_operand[0],registerName[0],strlen(registerName[0])) == 0) {
+							fprintf(out,"%s",temp_operand[i3]);
+						} else {
+							fprintf(out,"%s",temp_operand[i3]);
+						}
+					}
+					
+					fprintf(out,"\n");
+				}
+				i++;
+			}
 		}
 	}
 	
-	fprintf(stdout,"---\n%s\n---\n",fileData); //Print current state of memory
+	fprintf(stdout,"---\n%s\n---\n",fileData); /*Print current state of memory*/
 	
 	end:
 	if(in) { fclose(in); }

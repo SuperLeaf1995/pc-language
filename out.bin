@@ -1,0 +1,7 @@
+_entryPoint:
+	;no params
+	mov 0
+	mov 6
+	mov 8
+	mov 8
+	ret

@@ -1,0 +1,15 @@
+/*HALT_FUNCTION.PC*/
+
+/*Halts the CPU, must traslate to:
+
+[section .text]
+_myFunc:
+	hlt
+	ret
+
+*/
+
+routine myFunc() { /*routine MYFUNC without parameters*/
+	halt; /*Halt the CPU*/
+	return; /*Return to caller*/
+}

@@ -1,0 +1,21 @@
+/*XOR_OR_MOV.PC*/
+
+/*Optimizer puts MOV (r), 0 as XOR (r), (r) as a optimization*/
+/*Must be converted to this (excluding comments):
+
+[section .text]
+
+_entryPoint:
+	mov al, 0 ;NOT OPTIMIZED
+	xor al, al ;OPTIMIZED
+	ret ;THE RETURN INSTRUCTION
+
+*/
+
+routine entryPoint() {
+	copy(0,ra8); /*Set AL as 0*/
+	copy(ra16,ra8);
+	copy(ra8,ra32);
+	copy(ra8,ra8);
+	return; /*return to caller*/
+}
