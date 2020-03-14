@@ -1,9 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
-#include "statement.h"
-
-void createStatement(statement * s, char * a, unsigned char n) {
+void createStatement(statement * s, const char* a, unsigned char n) {
+	if(a == NULL) {
+		fprintf(stderr,"Null string on createStatement\n");
+		abort();
+	}
 	s->name = malloc(strlen(a)+1);
 	if(s->name == NULL) {
 		fprintf(stderr,"Cannot create statement\n");
@@ -15,7 +14,11 @@ void createStatement(statement * s, char * a, unsigned char n) {
 	return;
 }
 
-void addStatementTranslation(statement * s, char * a, unsigned char p) {
+void addStatementTranslation(statement * s, const char* a, unsigned char p) {
+	if(a == NULL) {
+		fprintf(stderr,"Null string on addStatementTranslation\n");
+		abort();
+	}
 	s->translation[p] = malloc(strlen(a)+1);
 	if(s->translation[p] == NULL) {
 		fprintf(stderr,"Cannot add statement translation\n");
@@ -28,6 +31,10 @@ void addStatementTranslation(statement * s, char * a, unsigned char p) {
 
 void statementInfo(FILE * t, statement * s) {
 	unsigned char i;
+	if(!t) {
+		fprintf(stderr,"Invalid stream given on statementInfo\n");
+		abort();
+	}
 	fprintf(t,"Name: %s\n",s->name);
 	fprintf(t,"No. of parameters: %u\n",s->n_params);
 	fprintf(t,"Translations\n");
@@ -39,19 +46,26 @@ void statementInfo(FILE * t, statement * s) {
 	return;
 }
 
-void statementToAssembly(FILE * f, statement * s, unsigned char p, char * t) {
-	unsigned long long i;
-	unsigned long long i2;
-	unsigned long long i3;
+void statementToAssembly(FILE * f, statement * s, unsigned char p, char* t) {
+	size_t i = 0;
+	int i2 = 0;
+	int i3 = 0;
 	char * tx;
+	if(t == NULL) {
+		fprintf(stderr,"No parameter statement\n");
+	}
 	if(s->translation[p] == NULL) {
-		fprintf(stderr,"Illegal access to out-of bounds translation entry %u for statement (%s)\n",p,s->name);
+		if(s->name != NULL) {
+			fprintf(stderr,"Illegal access to out-of-bounds translation entry %u for statement (%s)\n",p,s->name);
+		} else {
+			fprintf(stderr,"Illegal access to out-of-bounds for void statement\n");
+		}
 		abort();
 	}
-	for(i = 0; i < strlen(t); i++) {
-		if(t[i] == '$') {
-			i++;
-			i2 = atol(t+i);
+	for(i = 0; i < strlen(s->translation[p]); i++) {
+		if(s->translation[p][i] == '$') { /*parameter*/
+			i++; i3 = 0;
+			i2 = atoi(s->translation[p]+i);
 			tx = strtok(t,",");
 			while(tx != NULL) {
 				if(i2 == i3) {
@@ -61,8 +75,17 @@ void statementToAssembly(FILE * f, statement * s, unsigned char p, char * t) {
 				tx = strtok(NULL,",");
 				i3++;
 			}
+		} else if(s->translation[p][i] == '*') { /*string*/
+			i2 = 0;
+			while(t[i2] != '"') {
+				i2++;
+			} i2++;
+			while(t[i2] != '"') {
+				fputc(t[i2],f);
+				i2++;
+			}
 		} else {
-			fputc(t[i],f);
+			fputc(s->translation[p][i],f);
 		}
 	}
 	return;

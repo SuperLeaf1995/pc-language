@@ -1,9 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
-#include "function.h"
-
-void createFunction(function * f, char * n, char * p) {
+void createFunction(function * f, const char* n, const char* p) {
 	f->name = malloc(strlen(n)+1);
 	if(f->name == NULL) {
 		fprintf(stderr,"Cannot create function name\n");

@@ -2,82 +2,35 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#if defined(__GNUC__)
+#include <unistd.h>
+#include <pthread.h>
+#endif
+
 #include <string.h>
 #include <memory.h>
 
 #include "token.h"
-#include "process.c"
-#include "statement.c"
-#include "function.c"
+#include "process.h"
+#include "function.h"
+#include "statement.h"
 
 function functions[64];
 statement statements[64];
 
-unsigned long long i;
-unsigned long long i2;
-unsigned long long i3;
+int i;
+int i2;
+int i3;
 unsigned char n_statements;
 
-unsigned char doStatementParse(FILE * f, char * fd, size_t fs, unsigned char p) {
-	unsigned char statement_param_len;
-	char t_statement_param[512];
-	
-	statement_param_len = 0;
-	
-	while(memcmp(fd+i,token[WHITESPACE],1) == 0) { /*Skip whitespaces*/
-		i++;
-		if(i > fs) {
-			i = fs;
-			return 1;
-		}
-	}
-	
-	/*Write statement into an assembly thing*/
-	for(i2 = 0; i2 < n_statements; i2++) {
-		if(memcmp(fd+i,statements[i2].name,strlen(statements[i2].name)) == 0) {
-			if(statements[i2].n_params == 0) {
-				statementToAssembly(f,&statements[i2],p,NULL);
-				i += strlen(statements[i2].name);
-			} else {
-				while(memcmp(fd+i,token[PAR_OPEN],1) != 0) { /*Skip until a brace is found*/
-					i++;
-				} i++;
-				for(i3 = 0; i3 < statements[i2].n_params-1; i3++) {
-					if(i3 != statements[i2].n_params) {
-						while(memcmp(fd+i,token[COMMA],1) != 0) { /*Skip until a brace is found*/
-							t_statement_param[statement_param_len] = fd[i];
-							statement_param_len++;
-							i++;
-							if(statement_param_len > 512) {
-								fprintf(stderr,"Parameter bigger than allowed temporal buffer\n");
-								abort();
-							}
-						}
-					}
-					t_statement_param[statement_param_len] = 0;
-				}
-				while(memcmp(fd+i,token[PAR_CLOSE],1) != 0) { /*Skip until a brace is found*/
-					t_statement_param[statement_param_len] = fd[i];
-					statement_param_len++;
-					i++;
-					if(statement_param_len > 255) {
-						fprintf(stderr,"Parameter bigger than allowed temporal buffer\n");
-						abort();
-					}
-					t_statement_param[statement_param_len] = 0;
-				}
-				fprintf(stdout,"%llu : %s\n",i,t_statement_param);
-				while(memcmp(fd+i,token[SEMICOLON],1) != 0) { /*Read until a semicolon is found*/
-					i++;
-				} i++;
-				statementToAssembly(f,&statements[i2],p,t_statement_param);
-				i += strlen(statements[i2].name);
-				i += statement_param_len;
-			}
-		}
-	}
-	return 0;
-}
+int fileSize;
+int commentLen;
+int varNameLen;
+int paramLen;
+int statementLen;
+int statementSecondLen;
+int statementSecondLenSecond;
 
 /*Argument-processor variables*/
 FILE * out;
@@ -93,6 +46,15 @@ unsigned char platformId;
 unsigned char isReg;
 unsigned char current_function;
 unsigned char streamEnd;
+
+/*File-processor variables*/
+char * fileData;
+
+char temp[512];
+char temp_param[512];
+char temp_statement[258];
+char * temp_decompose;
+char temp_operand[4][258];
 
 const char * platforms[] = {
 	"cdc6000",
@@ -136,26 +98,6 @@ const char * platforms[] = {
 	"elbrus"
 };
 
-/*File-processor variables*/
-unsigned long long fileSize;
-char * fileData;
-
-/*Pre-processor variables*/
-unsigned long long commentLen;
-
-/*Lexer variables*/
-unsigned long long varNameLen;
-unsigned long long paramLen;
-unsigned long long statementLen;
-unsigned long long statementSecondLen;
-unsigned long long statementSecondLenSecond;
-
-char temp[255];
-char temp_param[255];
-char temp_statement[127];
-char * temp_decompose;
-char temp_operand[4][127];
-
 const char* keyword[] = {
 	"bss_byte",
 	"bss_word",
@@ -177,10 +119,69 @@ size_t getfilelen(FILE * _s) {
 	return i;
 }
 
+unsigned char doStatementParse(FILE * f, char * fd, int fs, unsigned char p) {
+	unsigned short statement_param_len;
+	char t_statement_param[512];
+
+	statement_param_len = 0;
+
+	while(memcmp(fd+i,token[WHITESPACE],1) == 0) { /*Skip whitespaces*/
+		i++;
+		if(i > fs) {
+			i = fs;
+			return 1;
+		}
+	}
+
+	/*Write statement into an assembly thing*/
+	for(i2 = 0; i2 < n_statements; i2++) {
+		if(memcmp(fd+i,statements[i2].name,strlen(statements[i2].name)) == 0) {
+			if(statements[i2].n_params == 0) {
+				statementToAssembly(f,&statements[i2],p,NULL); /*this "trash_const" is just that, trash*/
+				i += strlen(statements[i2].name);
+			} else {
+				while(memcmp(fd+i,token[PAR_OPEN],1) != 0) { /*Skip until a brace is found*/
+					i++;
+				} i++;
+				for(i3 = 0; i3 < statements[i2].n_params-1; i3++) {
+					if(i3 != statements[i2].n_params) {
+						while(memcmp(fd+i,token[COMMA],1) != 0) { /*Skip until a brace is found*/
+							t_statement_param[statement_param_len] = fd[i];
+							statement_param_len++;
+							i++;
+							if(statement_param_len > 512) {
+								fprintf(stderr,"Parameter bigger than allowed temporal buffer\n");
+								abort();
+							}
+						}
+					}
+					t_statement_param[statement_param_len] = 0;
+				}
+				while(memcmp(fd+i,token[PAR_CLOSE],1) != 0) { /*Skip until a brace is found*/
+					t_statement_param[statement_param_len] = fd[i];
+					statement_param_len++;
+					i++;
+					if(statement_param_len > 255) {
+						fprintf(stderr,"Parameter bigger than allowed temporal buffer\n");
+						abort();
+					}
+					t_statement_param[statement_param_len] = 0;
+				}
+				fprintf(stdout,"%i : %s\n",i,t_statement_param);
+				while(memcmp(fd+i,token[SEMICOLON],1) != 0) { /*Read until a semicolon is found*/
+					i++;
+				} i++;
+				statementToAssembly(f,&statements[i2],p,t_statement_param);
+			}
+		}
+	}
+	return 0;
+}
+
 int main(int argc, char * argv[]) {
-	
+
 	current_function = 0;
-	
+
 	/*Argument-processor*/
 	/*Processes the arguments and enables certain functions of the compiler*/
 	/*including warnings*/
@@ -192,7 +193,7 @@ int main(int argc, char * argv[]) {
 		fprintf(stderr,"Too many arguments supplied\n");
 		goto end;
 	}
-	
+
 	for(i = 1; i < argc; i++) {
 		if(strcmp("-Wall",argv[i]) == 0) { /*Is -Wall supplied?*/
 			fprintf(stdout,"All warnings enabled\n");
@@ -252,7 +253,7 @@ int main(int argc, char * argv[]) {
 			i = i;
 		}
 	}
-	
+
 	if(namePlatform == NULL) { /*No file was issued*/
 		namePlatform = malloc(strlen(defaultPlatform)+1);
 		if(namePlatform == NULL) {
@@ -272,7 +273,7 @@ int main(int argc, char * argv[]) {
 		fprintf(stdout,"Using implicit output filename: %s\n",outputFile);
 	}
 	if(temp_decompose == NULL) {
-		temp_decompose = malloc(255);
+		temp_decompose = malloc(512);
 		if(temp_decompose == NULL) {
 			fprintf(stderr,"Cannot allocate memory for temp_decompose");
 			goto end;
@@ -293,7 +294,7 @@ int main(int argc, char * argv[]) {
 			platformId = i;
 		}
 	}
-	
+
 	/*File-processor*/
 	/*This processor gets file size and place all data in memory*/
 	fileSize = getfilelen(in);
@@ -304,40 +305,44 @@ int main(int argc, char * argv[]) {
 	}
 	memset(fileData,0,fileSize+1);
 	fread(fileData,sizeof(char),fileSize,in); /*Place all data on fileData*/
-	
-	n_statements = 5;
-	
+
+	n_statements = 6;
+
 	createStatement(&statements[0],"reboot",0);
 	createStatement(&statements[1],"return",0);
 	createStatement(&statements[2],"shutdown",0);
 	createStatement(&statements[3],"copy",2);
 	createStatement(&statements[4],"echo",1);
-	
+	createStatement(&statements[5],"halt",0);
+
 	addStatementTranslation(&statements[0],"xor ax, ax\nint 16h\n",4);
 	addStatementTranslation(&statements[0],"xor ax, ax\nint 16h\n",10);
 
 	addStatementTranslation(&statements[1],"ret\n",4);
 	addStatementTranslation(&statements[1],"rts\n",5);
 	addStatementTranslation(&statements[1],"ret\n",10);
-	
+
 	addStatementTranslation(&statements[3],"mov $1,$0\n",4);
 	addStatementTranslation(&statements[3],"mov $1,$0\n",10);
+
+	addStatementTranslation(&statements[4],"*\n",0);
+	addStatementTranslation(&statements[4],"*\n",1);
+	addStatementTranslation(&statements[4],"*\n",2);
+	addStatementTranslation(&statements[4],"*\n",3);
+	addStatementTranslation(&statements[4],"*\n",4);
+	addStatementTranslation(&statements[4],"*\n",5);
+	addStatementTranslation(&statements[4],"*\n",6);
+	addStatementTranslation(&statements[4],"*\n",7);
+	addStatementTranslation(&statements[4],"*\n",8);
+	addStatementTranslation(&statements[4],"*\n",9);
+	addStatementTranslation(&statements[4],"*\n",10);
+	addStatementTranslation(&statements[4],"*\n",11);
 	
-	addStatementTranslation(&statements[4],"$0\n",0);
-	addStatementTranslation(&statements[4],"$0\n",1);
-	addStatementTranslation(&statements[4],"$0\n",2);
-	addStatementTranslation(&statements[4],"$0\n",3);
-	addStatementTranslation(&statements[4],"$0\n",4);
-	addStatementTranslation(&statements[4],"$0\n",5);
-	addStatementTranslation(&statements[4],"$0\n",6);
-	addStatementTranslation(&statements[4],"$0\n",7);
-	addStatementTranslation(&statements[4],"$0\n",8);
-	addStatementTranslation(&statements[4],"$0\n",9);
-	addStatementTranslation(&statements[4],"$0\n",10);
-	addStatementTranslation(&statements[4],"$0\n",11);
-		
+	addStatementTranslation(&statements[5],"hlt\n",4);
+	addStatementTranslation(&statements[5],"hlt\n",10);
+
 	preProcess(fileSize,fileData);
-	
+
 	/*Lexer*/
 	/*List tokens and keywords in the program*/
 	if(platformId == 10) {
@@ -386,11 +391,11 @@ int main(int argc, char * argv[]) {
 			}
 			functionBody:
 			temp[varNameLen] = 0;
-			
+
 			createFunction(&functions[current_function],temp,temp_param);
 			fprintf(stdout,"%s ( %s )\n",functions[current_function].name,functions[current_function].params);
 			current_function++;
-			
+
 			/*Write the temp label with the underscore to the out file*/
 			/*this can create a small routine*/
 			if(platformId == 5) {
@@ -398,45 +403,32 @@ int main(int argc, char * argv[]) {
 			} else if(platformId == 10) {
 				fprintf(out,"_%s:\n",temp);
 			}
-			
-			/*Decompose Function into individual childrens*/
-			temp_decompose = strtok(temp_param,",");
-			if(temp_decompose == NULL) {
-				fprintf(stdout,"\tno parameters\n");
-			}
-			fprintf(stdout,"B");
-			while(temp_decompose != NULL) {
-				fprintf(stdout,"%s\t",temp_decompose);
-				fprintf(stdout,"\tparameter %s\n",temp_decompose);
-				temp_decompose = strtok(NULL,",");
-			}
-			fprintf(stdout,"1");
-			fprintf(stdout,"\n");
-			fprintf(stdout,"2");
-			
+
 			/*We now have the function HEADER, lets parse the body and write it
 			accordingly*/
 			while(memcmp(fileData+i,token[2],1) != 0) { /*skip until the open brace*/
 				i++;
+				if(i >= fileSize) {
+					goto streamEnded;
+				}
 			}
 			i++;
 			while(memcmp(fileData+i,token[3],1) != 0 && i <= fileSize) { /*parse until closing brace*/
 				streamEnd = doStatementParse(out,fileData,fileSize,platformId);
 				if(streamEnd == 1) {
-					fprintf(stdout,"end of data\n");
+					fprintf(stdout,"End of data\n");
 					goto streamEnded;
 				}
 				i++;
 				if(i > fileSize) {
-					fprintf(stderr,"Error: buffer overflow\n");
 					goto end;
 				}
 			}
 		}
 	}
-	
+
 	streamEnded:
-	
+
 	end:
 	for(i = 0; i < current_function; i++) {
 		deleteFunction(&functions[i]);

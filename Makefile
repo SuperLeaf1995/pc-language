@@ -1,5 +1,5 @@
-CFLAGS = -Wall -std=c89
+CFLAGS = -Wall -Wextra -std=c89 -O3 -g
 CC = gcc
 
 test:
-	$(CC) $(CFLAGS) src/main.c -o out/potato.o
+	$(CC) $(CFLAGS) src/main.c -o bin/pc.o

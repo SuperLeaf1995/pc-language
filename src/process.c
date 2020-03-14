@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <memory.h>
 #include "token.h"
 
 /*Pre-processor*/
@@ -9,7 +7,7 @@ void preProcess(size_t s, char * fd) {
 	unsigned short commentLen;
 	unsigned short i;
 	unsigned short i2;
-	
+
 	/*Replace tabs with spaces*/
 	for(i = 0; i < s; i++) {
 		if(fd[i] == '\t') {

@@ -1,6 +1,6 @@
-*.o
-*.bin
-*.exe
-*.com
-*.coff
+out/*.*
 samples/b*.pc
+
+*.cbp
+*.layout
+*.depend
