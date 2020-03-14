@@ -3,3 +3,4 @@
 *.exe
 *.com
 *.coff
+samples/b*.pc

@@ -14,8 +14,8 @@ void createFunction(function * f, char * n, char * p) {
 		fprintf(stderr,"Cannot create function parameters\n");
 		abort();
 	}
-	memcpy(f->name,n,strlen(n));
-	memcpy(f->params,p,strlen(p));
+	strcpy(f->name,n);
+	strcpy(f->params,p);
 	return;
 }
 

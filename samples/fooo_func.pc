@@ -3,6 +3,8 @@ byte z;
 byte x;
 byte y;
 
+return;
+
 routine big(byte a, byte b) {
 	copy(a,b);
 	return;

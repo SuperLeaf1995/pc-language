@@ -5,6 +5,7 @@
 #include <string.h>
 #include <memory.h>
 
+#include "token.h"
 #include "process.c"
 #include "statement.c"
 #include "function.c"
@@ -12,15 +13,16 @@
 function functions[64];
 statement statements[64];
 
+unsigned long long i;
+unsigned long long i2;
+unsigned long long i3;
+unsigned char n_statements;
+
 unsigned char doStatementParse(FILE * f, char * fd, size_t fs, unsigned char p) {
-	/*Statement processor*/
-	unsigned short i;
-	unsigned short i2;
-	/*unsigned short i3;
-	unsigned short statementLen;
+	unsigned char statement_param_len;
+	char t_statement_param[512];
 	
-	/unsigned char t_statement_param[255];
-	unsigned char t_statement[255];*/
+	statement_param_len = 0;
 	
 	while(memcmp(fd+i,token[WHITESPACE],1) == 0) { /*Skip whitespaces*/
 		i++;
@@ -31,19 +33,51 @@ unsigned char doStatementParse(FILE * f, char * fd, size_t fs, unsigned char p) 
 	}
 	
 	/*Write statement into an assembly thing*/
-	for(i2 = 0; i2 < 1; i2++) {
-		if(statements[i2].n_params == 0) {
-			if(memcmp(fd+i,statements[i2].name,strlen(statements[i2].name)) == 0) {
-				statementToAssembly(f,&statements[i2],p);
+	for(i2 = 0; i2 < n_statements; i2++) {
+		if(memcmp(fd+i,statements[i2].name,strlen(statements[i2].name)) == 0) {
+			if(statements[i2].n_params == 0) {
+				statementToAssembly(f,&statements[i2],p,NULL);
+				i += strlen(statements[i2].name);
+			} else {
+				while(memcmp(fd+i,token[PAR_OPEN],1) != 0) { /*Skip until a brace is found*/
+					i++;
+				} i++;
+				for(i3 = 0; i3 < statements[i2].n_params-1; i3++) {
+					if(i3 != statements[i2].n_params) {
+						while(memcmp(fd+i,token[COMMA],1) != 0) { /*Skip until a brace is found*/
+							t_statement_param[statement_param_len] = fd[i];
+							statement_param_len++;
+							i++;
+							if(statement_param_len > 512) {
+								fprintf(stderr,"Parameter bigger than allowed temporal buffer\n");
+								abort();
+							}
+						}
+					}
+					t_statement_param[statement_param_len] = 0;
+				}
+				while(memcmp(fd+i,token[PAR_CLOSE],1) != 0) { /*Skip until a brace is found*/
+					t_statement_param[statement_param_len] = fd[i];
+					statement_param_len++;
+					i++;
+					if(statement_param_len > 255) {
+						fprintf(stderr,"Parameter bigger than allowed temporal buffer\n");
+						abort();
+					}
+					t_statement_param[statement_param_len] = 0;
+				}
+				fprintf(stdout,"%llu : %s\n",i,t_statement_param);
+				while(memcmp(fd+i,token[SEMICOLON],1) != 0) { /*Read until a semicolon is found*/
+					i++;
+				} i++;
+				statementToAssembly(f,&statements[i2],p,t_statement_param);
+				i += strlen(statements[i2].name);
+				i += statement_param_len;
 			}
 		}
 	}
 	return 0;
 }
-
-size_t i;
-size_t i2;
-size_t i3;
 
 /*Argument-processor variables*/
 FILE * out;
@@ -57,7 +91,7 @@ const char * defaultOutputFileName = "out.bin";
 
 unsigned char platformId;
 unsigned char isReg;
-unsigned char current_function = 0;
+unsigned char current_function;
 unsigned char streamEnd;
 
 const char * platforms[] = {
@@ -103,18 +137,18 @@ const char * platforms[] = {
 };
 
 /*File-processor variables*/
-size_t fileSize;
+unsigned long long fileSize;
 char * fileData;
 
 /*Pre-processor variables*/
-size_t commentLen;
+unsigned long long commentLen;
 
 /*Lexer variables*/
-size_t varNameLen;
-size_t paramLen;
-size_t statementLen;
-size_t statementSecondLen;
-size_t statementSecondLenSecond;
+unsigned long long varNameLen;
+unsigned long long paramLen;
+unsigned long long statementLen;
+unsigned long long statementSecondLen;
+unsigned long long statementSecondLenSecond;
 
 char temp[255];
 char temp_param[255];
@@ -134,49 +168,6 @@ const char* keyword[] = {
 	"routine"
 };
 
-const char* registerName[] = {
-	/*registers*/
-	"ra8",
-	"ra16",
-	"ra32",
-	"ra64",
-	"rb8",
-	"rb16",
-	"rb32",
-	"rb64",
-	"rc8",
-	"rc16",
-	"rc32",
-	"rc64",
-	"rd8",
-	"rd16",
-	"rd32",
-	"rd64",
-	
-	/*addres-register*/
-	"raa8",
-	"raa16",
-	"raa32",
-	"raa64",
-	"rab8",
-	"rab16",
-	"rab32",
-	"rab64",
-	"rac8",
-	"rac16",
-	"rac32",
-	"rac64",
-	"rad8",
-	"rad16",
-	"rad32",
-	"rad64"
-	
-	/*address and pointer stuff*/
-	"src",
-	"dst",
-	"pp"
-};
-
 size_t getfilelen(FILE * _s) {
 	register size_t i = 0;
 	while(fgetc(_s) != EOF) {
@@ -187,6 +178,8 @@ size_t getfilelen(FILE * _s) {
 }
 
 int main(int argc, char * argv[]) {
+	
+	current_function = 0;
 	
 	/*Argument-processor*/
 	/*Processes the arguments and enables certain functions of the compiler*/
@@ -311,9 +304,37 @@ int main(int argc, char * argv[]) {
 	}
 	memset(fileData,0,fileSize+1);
 	fread(fileData,sizeof(char),fileSize,in); /*Place all data on fileData*/
-		
-	createStatement(&statements[0],"call",1);
+	
+	n_statements = 5;
+	
+	createStatement(&statements[0],"reboot",0);
 	createStatement(&statements[1],"return",0);
+	createStatement(&statements[2],"shutdown",0);
+	createStatement(&statements[3],"copy",2);
+	createStatement(&statements[4],"echo",1);
+	
+	addStatementTranslation(&statements[0],"xor ax, ax\nint 16h\n",4);
+	addStatementTranslation(&statements[0],"xor ax, ax\nint 16h\n",10);
+
+	addStatementTranslation(&statements[1],"ret\n",4);
+	addStatementTranslation(&statements[1],"rts\n",5);
+	addStatementTranslation(&statements[1],"ret\n",10);
+	
+	addStatementTranslation(&statements[3],"mov $1,$0\n",4);
+	addStatementTranslation(&statements[3],"mov $1,$0\n",10);
+	
+	addStatementTranslation(&statements[4],"$0\n",0);
+	addStatementTranslation(&statements[4],"$0\n",1);
+	addStatementTranslation(&statements[4],"$0\n",2);
+	addStatementTranslation(&statements[4],"$0\n",3);
+	addStatementTranslation(&statements[4],"$0\n",4);
+	addStatementTranslation(&statements[4],"$0\n",5);
+	addStatementTranslation(&statements[4],"$0\n",6);
+	addStatementTranslation(&statements[4],"$0\n",7);
+	addStatementTranslation(&statements[4],"$0\n",8);
+	addStatementTranslation(&statements[4],"$0\n",9);
+	addStatementTranslation(&statements[4],"$0\n",10);
+	addStatementTranslation(&statements[4],"$0\n",11);
 		
 	preProcess(fileSize,fileData);
 	
@@ -328,10 +349,10 @@ int main(int argc, char * argv[]) {
 				fprintf(stdout,"%s <",keyword[i3]);
 				varNameLen = 0;
 				i += strlen(keyword[i3]);
-				while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
+				while(memcmp(fileData+i,token[WHITESPACE],1) == 0) { /*skip any whitespaces*/
 					i++;
-				}
-				while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
+				} i--;
+				while(memcmp(fileData+i,token[SEMICOLON],1) != 0) { /*get variable name*/
 					temp[varNameLen] = fileData[i];
 					varNameLen++;
 					i++;
@@ -341,30 +362,22 @@ int main(int argc, char * argv[]) {
 				fprintf(stdout,">\n");
 			}
 		}
-		if(memcmp(fileData+i,keyword[8],strlen(keyword[8])) == 0) {
-			fprintf(stdout,"%s <",keyword[8]);
-			i += 7;
-			varNameLen = 0;
-			paramLen = 0;
+		if(memcmp(fileData+i,keyword[8],strlen(keyword[8])) == 0) { /*"routine" keyword*/
+			i += strlen(keyword[8]);
+			varNameLen = 0; paramLen = 0;
 			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[6],1) != 0) { /*get variable name*/
-				if(memcmp(fileData+i,token[4],1) == 0) { /*print function params*/
-					fprintf(stdout,"parameters >>> (");
+			while(memcmp(fileData+i,token[SEMICOLON],1) != 0) { /*get variable name*/
+				if(memcmp(fileData+i,token[PAR_OPEN],1) == 0) { /*print function params*/
 					i++;
 					/*paramLen = 0;*/
-					while(memcmp(fileData+i,token[5],1) != 0) {
-						while(memcmp(fileData+i,token[7],1) == 0) { /*skip whitespaces*/
-							i++;
-						}
+					while(memcmp(fileData+i,token[PAR_CLOSE],1) != 0) {
 						temp_param[paramLen] = fileData[i];
 						paramLen++;
 						i++;
 					}
 					i++; /*skip the )*/
-					fprintf(stdout,"%s",temp_param);
-					fprintf(stdout,") for function: ");
 					goto functionBody;
 				}
 				temp[varNameLen] = fileData[i];
@@ -373,12 +386,10 @@ int main(int argc, char * argv[]) {
 			}
 			functionBody:
 			temp[varNameLen] = 0;
-			fprintf(stdout,"%s",temp);
-			fprintf(stdout,">\n");
 			
 			createFunction(&functions[current_function],temp,temp_param);
+			fprintf(stdout,"%s ( %s )\n",functions[current_function].name,functions[current_function].params);
 			current_function++;
-			fprintf(stdout,"%s(%s)\n",functions[current_function].name,functions[current_function].params);
 			
 			/*Write the temp label with the underscore to the out file*/
 			/*this can create a small routine*/
@@ -393,18 +404,23 @@ int main(int argc, char * argv[]) {
 			if(temp_decompose == NULL) {
 				fprintf(stdout,"\tno parameters\n");
 			}
+			fprintf(stdout,"B");
 			while(temp_decompose != NULL) {
 				fprintf(stdout,"%s\t",temp_decompose);
 				fprintf(stdout,"\tparameter %s\n",temp_decompose);
 				temp_decompose = strtok(NULL,",");
 			}
+			fprintf(stdout,"1");
 			fprintf(stdout,"\n");
+			fprintf(stdout,"2");
 			
 			/*We now have the function HEADER, lets parse the body and write it
 			accordingly*/
+			fprintf(stdout,"C");
 			while(memcmp(fileData+i,token[2],1) != 0) { /*skip until the open brace*/
 				i++;
 			}
+			fprintf(stdout,"D");
 			i++;
 			while(memcmp(fileData+i,token[3],1) != 0 && i <= fileSize) { /*parse until closing brace*/
 				streamEnd = doStatementParse(out,fileData,fileSize,platformId);
@@ -414,7 +430,7 @@ int main(int argc, char * argv[]) {
 				}
 				i++;
 				if(i > fileSize) {
-					fprintf(stderr,"error: buffer overflow\n");
+					fprintf(stderr,"Error: buffer overflow\n");
 					goto end;
 				}
 			}
@@ -422,11 +438,13 @@ int main(int argc, char * argv[]) {
 	}
 	
 	streamEnded:
-	fprintf(stdout,"---\n%s\n---\n",fileData); /*Print current state of memory*/
 	
 	end:
 	for(i = 0; i < current_function; i++) {
 		deleteFunction(&functions[i]);
+	}
+	for(i = 0; i < n_statements; i++) {
+		deleteStatement(&statements[i]);
 	}
 	if(in) { fclose(in); }
 	if(out) { fclose(out); }

@@ -1,3 +1,6 @@
+#ifndef TOKEN_H
+#define TOKEN_H
+
 #define COMMENT_OPEN 0
 #define COMMENT_CLOSE 1
 #define BRACE_OPEN 2
@@ -19,3 +22,5 @@ const char* token[] = {
 	" ",
 	","
 };
+
+#endif

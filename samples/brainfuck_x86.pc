@@ -1,0 +1,152 @@
+command_bf() {
+    echo("call os_command_init");
+    echo("mov bx, _BF_HEADER");
+    echo("call os_print_string");
+    echo("call os_print_new_line");
+    echo("mov bx, _BF_COPYRIGHT");
+    echo("call os_print_string    echo("
+    echo("call os_print_new_line");
+}
+
+routine restart() {
+    echo("call os_print_new_line");
+    echo("mov bx, _BF_PROMPT");
+    echo("call os_print_string");
+    echo("call _null_bf_buffer");
+    echo("call _null_bf_output");
+    echo("xor ax, ax");
+    echo("mov di, _BF_BUFFER");
+    echo("push ax");
+    echo("push di");
+}
+
+routine get_input() {
+    echo("call os_keystroke_echo");
+    echo("cmp ah, [KEY_ENTER]");
+    echo("je _output");
+    echo("cmp ah, [KEY_ESC]");
+    echo("je _exit");
+    echo("cmp al, '+'");
+    echo("je _add");
+    echo("cmp al, '-'");
+    echo("je _sub");
+    echo("cmp al, '>'");
+    echo("je _pointer_right");
+    echo("cmp al, '<'");
+    echo("je _pointer_left");
+    echo("cmp al, 'routine '");
+    echo("je _post");
+    echo("jmp _get_input");
+}
+
+routine add() {
+    echo("pop di");
+    echo("pop ax");
+    echo("inc ax");
+    echo("mov byte [routine BF_BUFFER], al");
+    echo("stosb");
+    echo("push ax");
+    echo("push di");
+    echo("jmp _get_input");
+}
+
+routine sub() {
+    echo("pop di");
+    echo("pop ax");
+    echo("dec ax");
+    echo("mov byte [routine BF_BUFFER], al");
+    echo("stosb");
+    echo("push ax");
+    echo("push di");
+    echo("jmp _get_input");
+}
+
+routine pointer_left() {
+    echo("pop di");
+    echo("pop ax");
+    echo("dec di");
+    echo("mov byte [routine BF_BUFFER], al");
+    echo("stosb");
+    echo("push ax");
+    echo("push di");
+    echo("jmp _get_input");
+}
+
+routine pointer_right() {
+    echo("pop di");
+    echo("pop ax");
+    echo("inc di");
+    echo("mov byte [routine BF_BUFFER], al");
+    echo("stosb");
+    echo("push ax");
+    echo("push di");
+    echo("jmp _get_input");
+}
+
+routine post() {
+    echo("pop di");
+    echo("pop ax");
+    echo("mov di, _BF_OUTPUT");
+    echo("mov byte [routine BF_OUTPUT], _BF_BUFFER");
+    echo("stosb");
+    echo("push ax");
+    echo("push di");
+    echo("jmp _get_input");
+}
+
+routine output() {
+    echo("pop di");
+    echo("pop ax");
+    echo("call os_print_new_line");
+    echo("mov bx, _BF_OUTPUT");
+    echo("call os_print_string");
+    echo("jmp _restart");
+}
+
+routine exit() {
+    echo("call os_command_finish");
+    echo("hlt");
+}
+
+routine null_bf_buffer() {
+    echo("xor di, di");
+    echo("mov di, _BF_BUFFER");
+    echo("mov si, 5000");
+}
+
+routine null_bf_buffer_loop() {
+    echo("cmp si, 0");
+    echo("je _null_bf_buffer_done");
+    echo("mov al, 0");
+    echo("stosb");
+    echo("dec si");
+    echo("jmp _null_bf_buffer_loop");
+}
+
+routine null_bf_buffer_done() {
+    return;
+}
+
+routine null_bf_output() {
+    echo("xor di, di");
+    echo("mov di, _BF_OUTPUT");
+    echo("mov si, 5000");
+}
+
+routine null_bf_output_loop() {
+    echo("cmp si, 0");
+    echo("je _null_bf_output_done");
+    echo("mov al, 0");
+    echo("stosb");
+    echo("dec si");
+    echo("jmp _null_bf_output_loop");
+}
+
+routine null_bf_output_done() {
+    return;
+    echo("_BF_HEADER db 'Brainfuck interpreter for AtieDOS', 0");
+    echo("_BF_COPYRIGHT db 'Copyright (c) 2020 AtieSoftwareroutine  All rights reserved', 0");
+    echo("_BF_PROMPT db '- ', 0");
+    echo("_BF_BUFFER times 8192 db 0");
+    echo("_BF_OUTPUT times 256 db 0");
+}
