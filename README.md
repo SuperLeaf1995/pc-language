@@ -16,36 +16,32 @@ There are 2 types of registers in Potato-C, they represent the
 abstracted forms of the target architecture's registers, and can be
 used as a variable if there are no engough registers (i.e 6502).
 
-## Storage registers
-ra8
-ra16
-ra32
-ra64
+| Name | Size (Bytes) | Type |
+| --- | --- | --- |
+| ra8 | 1 | Storage |
+| ra16 | 2 | Storage |
+| ra32 | 4 | Storage |
+| ra64 | 8 | Storage |
+| rb8 | 1 | Storage |
+| rb16 | 2 | Storage |
+| rb32 | 4 | Storage |
+| rb64 | 8 | Storage |
+| rc8 | 1 | Storage |
+| rc16 | 2 | Storage |
+| rc32 | 4 | Storage |
+| rc64 | 8 | Storage |
+| rd8 | 1 | Storage |
+| rd16 | 2 | Storage |
+| rd32 | 4 | Storage |
+| rd64 | 8 | Storage |
+| raa | ? | Address |
+| rab | ? | Address |
+| rac | ? | Address |
+| dst | ? | Address |
+| src | ? | Address |
+| pp | ? | Address |
 
-rb8
-rb16
-rb32
-rb64
-
-rc8
-rc16
-rc32
-rc64
-
-rd8
-rd16
-rd32
-rd64
-
-## Address registers
-raa
-rab
-rac
-
-dst
-src
-
-pp
+Size of Address registers varies by architecture.
 
 Those registers are not part of any architecture (they are similar to x64
 registers trough). They are abstracted by Potato-C into the target architecture
