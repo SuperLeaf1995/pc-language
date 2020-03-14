@@ -284,7 +284,7 @@ int main(int argc, char * argv[]) {
 			goto end;
 		}
 	}
-	out = fopen(outputFile,"wb"); /*Open output file in binary mode*/
+	out = fopen(outputFile,"wt"); /*Open output file in binary mode*/
 	if(!out) { /*Write error*/
 		fprintf(stderr,"Output file cannot be written\n");
 		goto end;
