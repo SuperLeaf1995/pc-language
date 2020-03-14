@@ -416,11 +416,9 @@ int main(int argc, char * argv[]) {
 			
 			/*We now have the function HEADER, lets parse the body and write it
 			accordingly*/
-			fprintf(stdout,"C");
 			while(memcmp(fileData+i,token[2],1) != 0) { /*skip until the open brace*/
 				i++;
 			}
-			fprintf(stdout,"D");
 			i++;
 			while(memcmp(fileData+i,token[3],1) != 0 && i <= fileSize) { /*parse until closing brace*/
 				streamEnd = doStatementParse(out,fileData,fileSize,platformId);
