@@ -1,22 +1,41 @@
-Potato-C Reference Manual
+FAQ
 
-1. FAQ
+1. General
 
 What is "Potato-C"?
 Potato-C is an no-OOP, programming language designed to be as fast as
 assembly and being as readable as C.
+
+Where does "Potato-C" got it's syntax?
+Some weeks ago i was developing a programming language for controlling
+stepper motors named SCRIPT-SR (closed source), the syntax mimic'ed
+the syntax of assembly. In some later weeks, i redesigned the programming
+language SCRIPT-SR into another programming language named TIDAL wich
+served the same porpouse. However, TIDAL was dotted with a Lexer, a Parser
+and many other cool stuff for a programming language. It's mimic to assembly
+and the case that it ressembled C made me change the name to "Potato-C" and
+made it what is today.
 
 Why is it named "Potato-C"?
 Due to his similarities with C, it has been named Potato-C as a reference
 to "Potato" PCs.
 
 How many architectures does "Potato-C" supports?
-Potato-C, at the time of writing only supports NASM x86, but it's planned
-to be more architectures, like x64, ARM, etc.
+Potato-C, at the time of writing supports no architectures, unless echo()
+is used.
 
 Where i can get "Potato-C"?
 Potato-C can be got from the releases page, there are compiled versions for
 Linux.
+
+What license does Potato-C has?
+Potato-C is under the BSD license, see LICENSE.md for more information.
+
+What operating systems Potato-C can be compiled?
+Potato-C has a Makefile that should work on most compilers. So it's
+reasonable to say that Potato-C can be compiled on DOS, AmigaOS, C64,
+Apple II (including IIgs), Windows, Linux, MacOS, etc. Basically all
+the compilers that supports the C89 standard.
 
 What are the advantages of "Potato-C" over conventional assembly?
 Potato-C can be portable to any architecture, with the style of assembly
@@ -28,19 +47,12 @@ Why not just use C?
 6502, CDC 6000, are examples of architectures that nowhere will support
 conventional C, without a huge modification or some weird ANSI standard.
 
-What license does Potato-C has?
-Potato-C is under the BSD license, see LICENSE.md for more information.
-
-What operating systems Potato-C can be compiled?
-Potato-C has a Makefile that should work on most compilers. So it's
-reasonable to say that Potato-C can be compiled on DOS, AmigaOS, C64,
-Apple II (including IIgs), Windows, Linux, MacOS, etc. Basically all
-the compilers that supports the C89 standard.
+2. Troubleshooting
 
 When i input certain platform, i.e "cdc6000", i get a blank output, why?
 Potato-C is under developement, generating blank outputs means that
 the architecture is not supported yet. You can see a list of supported
-architectures using the command line option "-hp".
+architectures using the command line option "-ha".
 
 X is incorrect why i don't get Y error?
 Potato-C has a weak error handler, the most it can do is give you some
@@ -50,3 +62,7 @@ I made my own CPU and i want it to be added now!
 You're very welcome to give a complete manual on how to handle registers
 and stuff. Send me a message via discord (SuperLeaf 1995#5912) and i will
 kindly add support for your CPU to Potato-C.
+
+I found a bug, what should i do?
+Just open a new issue in the repository, and i will check it out. Give
+Potato-C's debug output in a text file or in the issue itself.

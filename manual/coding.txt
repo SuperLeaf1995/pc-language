@@ -1,32 +1,57 @@
 Coding convention
-
+========================================================================
 Potato-C is a unique language which looks like a bad spinoff of C--. Trough
 it is not, and aims to achieve more.
 
-Let's start by setting ra8 to zero.
+Let's start by setting up a simple function:
 
 routine foo() {
-	copy(0,ra8);
 	return;
 }
 
-now ra8 is set to zero.
 Potato-C will transform this code into:
 
 x86
 [section .text]
 
 _foo:
-	mov al, 0
 	ret
+
+Code generation
+========================================================================
+All functions in Potato-C will have an undescore before their name, regardless of the
+choosen architecture.
 	
-x64
+Architecture-Dependent Echo's
+========================================================================
+Potato-C allows non-portable code to be placed in Potato-C, this allows for better
+code handling, but destroys some portability.
+
+Here is an example of echo'ed architecture dependent code:
+
+routine foo() {
+	echo("mov al, 'H'");
+	echo("mov ah, 0Eh");
+	echo("int 10h");
+	return;
+}
+
+In wich Potato-C will translate to:
+
+x86
 [section .text]
+
 _foo:
-	mov al, 0
+	mov al, 'H'
+	mov ah, 0Eh
+	int 10h
 	ret
 	
 6502
 _foo:
-	ldx #$0
+	[invalid] ; architecture
+	[invalid] ; dependant
+	[invalid] ; instructions
 	rts
+
+Echo's are not limited to any architecture, but they can generate errors when compiling in the wrong architecture.

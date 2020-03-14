@@ -197,6 +197,11 @@ int main(int argc, char * argv[]) {
 	for(i = 1; i < argc; i++) {
 		if(strcmp("-Wall",argv[i]) == 0) { /*Is -Wall supplied?*/
 			fprintf(stdout,"All warnings enabled\n");
+		} else if(strcmp("-ha",argv[i]) == 0) { /*Is -Wall supplied?*/
+			fprintf(stdout,"Help - Architectures\n");
+			fprintf(stdout,"6502\n");
+			fprintf(stdout,"x86\n");
+			fprintf(stdout,"*Note: Any architecture instruction can be written manually using the echo() command\n");
 		} else if(strcmp("-p",argv[i]) == 0) { /*Explicit platform*/
 			i++; /*Increment into next argument*/
 			/*If i > argc, then issue error*/
