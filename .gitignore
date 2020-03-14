@@ -1,4 +1,4 @@
-out/*.*
+bin/*.*
 samples/b*.pc
 
 *.cbp
