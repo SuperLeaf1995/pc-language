@@ -1,6 +1,6 @@
 bin/*.*
 samples/b*.pc
-
+bin/
 *.cbp
 *.layout
 *.depend
