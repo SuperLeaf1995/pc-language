@@ -1,0 +1,5 @@
+routine 6502_echo() {
+	echo("LDY #$00"); /*use on easy6502.org*/
+	echo("STY $0200");
+	halt;
+}

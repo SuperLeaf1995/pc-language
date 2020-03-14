@@ -1,0 +1,6 @@
+/*echos without routine*/
+
+echo("mov al, 'H'");
+echo("mov ah, 0Eh");
+echo("int 10h");
+halt;

@@ -1,0 +1,8 @@
+routine x86_echo() {
+	echo("mov ah, 0Eh");
+	echo("mov al, 'H'");
+	echo("int 10h");
+	echo("mov al, 'I'");
+	echo("int 10h");
+	return;
+}

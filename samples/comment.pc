@@ -1,0 +1,3 @@
+routine comment(/*Comment inside paramlist*/) /*comment betwen function and stuff*/{
+	/*Comment inside routine*/
+} /*comment after function*/
