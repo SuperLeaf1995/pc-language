@@ -46,3 +46,6 @@ Size of Address registers varies by architecture.
 Those registers are not part of any architecture (they are similar to x64
 registers trough). They are abstracted by Potato-C into the target architecture
 registers. (x86) ra8 -> al, (6502) ra8 -> x, (CDC 6000) ra8 -> X1, etc.
+
+# Social
+Discord & Hoster - https://discord.gg/7AVRc4x
