@@ -12,6 +12,9 @@ typedef struct function {
 	unsigned char n_params;
 }function;
 
+void createFunction(function * f, const char* n, const char* p);
+void deleteFunction(function * f);
+
 #include "function.c"
 
 #endif

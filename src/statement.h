@@ -12,6 +12,12 @@ typedef struct statement {
 	unsigned char n_translation;
 }statement;
 
+void createStatement(statement * s, const char* a, unsigned char n);
+void addStatementTranslation(statement * s, const char* a, unsigned char p);
+void statementInfo(FILE * t, statement * s);
+void statementToAssembly(FILE * f, statement * s, unsigned char p, char* t);
+void deleteStatement(statement * s);
+
 #include "statement.c"
 
 #endif

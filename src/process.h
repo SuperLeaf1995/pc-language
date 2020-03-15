@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <memory.h>
 
+#include "token.h"
+
+void preProcess(int s, char * fd);
+
 #include "process.c"
 
 #endif

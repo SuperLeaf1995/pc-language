@@ -120,12 +120,10 @@ size_t getfilelen(FILE * _s) {
 }
 
 unsigned char doStatementParse(FILE * f, char * fd, int fs, unsigned char p) {
-	unsigned short statement_param_len;
+	unsigned short statement_param_len = 0;
 	char t_statement_param[512];
 
-	statement_param_len = 0;
-
-	while(memcmp(fd+i,token[WHITESPACE],1) == 0) { /*Skip whitespaces*/
+	while(memcmp(fd+i,token_list[WHITESPACE],1) == 0) { /*Skip whitespaces*/
 		i++;
 		if(i > fs) {
 			i = fs;
@@ -137,15 +135,15 @@ unsigned char doStatementParse(FILE * f, char * fd, int fs, unsigned char p) {
 	for(i2 = 0; i2 < n_statements; i2++) {
 		if(memcmp(fd+i,statements[i2].name,strlen(statements[i2].name)) == 0) {
 			if(statements[i2].n_params == 0) {
-				statementToAssembly(f,&statements[i2],p,NULL); /*this "trash_const" is just that, trash*/
+				statementToAssembly(f,&statements[i2],p,NULL);
 				i += strlen(statements[i2].name);
 			} else {
-				while(memcmp(fd+i,token[PAR_OPEN],1) != 0) { /*Skip until a brace is found*/
+				while(memcmp(fd+i,token_list[PAR_OPEN],1) != 0) { /*Skip until a brace is found*/
 					i++;
 				} i++;
 				for(i3 = 0; i3 < statements[i2].n_params-1; i3++) {
 					if(i3 != statements[i2].n_params) {
-						while(memcmp(fd+i,token[COMMA],1) != 0) { /*Skip until a brace is found*/
+						while(memcmp(fd+i,token_list[COMMA],1) != 0) { /*Skip until a brace is found*/
 							t_statement_param[statement_param_len] = fd[i];
 							statement_param_len++;
 							i++;
@@ -157,7 +155,7 @@ unsigned char doStatementParse(FILE * f, char * fd, int fs, unsigned char p) {
 					}
 					t_statement_param[statement_param_len] = 0;
 				}
-				while(memcmp(fd+i,token[PAR_CLOSE],1) != 0) { /*Skip until a brace is found*/
+				while(memcmp(fd+i,token_list[PAR_CLOSE],1) != 0) { /*Skip until a brace is found*/
 					t_statement_param[statement_param_len] = fd[i];
 					statement_param_len++;
 					i++;
@@ -168,7 +166,7 @@ unsigned char doStatementParse(FILE * f, char * fd, int fs, unsigned char p) {
 					t_statement_param[statement_param_len] = 0;
 				}
 				fprintf(stdout,"%i : %s\n",i,t_statement_param);
-				while(memcmp(fd+i,token[SEMICOLON],1) != 0) { /*Read until a semicolon is found*/
+				while(memcmp(fd+i,token_list[SEMICOLON],1) != 0) { /*Read until a semicolon is found*/
 					i++;
 				} i++;
 				statementToAssembly(f,&statements[i2],p,t_statement_param);
@@ -311,7 +309,7 @@ int main(int argc, char * argv[]) {
 	memset(fileData,0,fileSize+1);
 	fread(fileData,sizeof(char),fileSize,in); /*Place all data on fileData*/
 
-	n_statements = 6;
+	n_statements = 25;
 
 	createStatement(&statements[0],"reboot",0);
 	createStatement(&statements[1],"return",0);
@@ -319,6 +317,12 @@ int main(int argc, char * argv[]) {
 	createStatement(&statements[3],"copy",2);
 	createStatement(&statements[4],"echo",1);
 	createStatement(&statements[5],"halt",0);
+	
+	for(i = 0; i < 20; i++) {
+		createStatement(&statements[i+6],platforms[i],1);
+		addStatementTranslation(&statements[i+6],"*\n",i);
+		statementInfo(stdout,&statements[i+6]);
+	}
 
 	addStatementTranslation(&statements[0],"xor ax, ax\nint 16h\n",4);
 	addStatementTranslation(&statements[0],"xor ax, ax\nint 16h\n",10);
@@ -349,20 +353,17 @@ int main(int argc, char * argv[]) {
 	preProcess(fileSize,fileData);
 
 	/*Lexer*/
-	/*List tokens and keywords in the program*/
-	if(platformId == 10) {
-		fprintf(out,"[section .text]\n\n");
-	}
+	/*List token_lists and keywords in the program*/
 	for(i = 0; i < fileSize; i++) {
 		for(i3 = 0; i3 < 7; i3++) {
 			if(memcmp(fileData+i,keyword[i3],strlen(keyword[i3])) == 0) {
 				fprintf(stdout,"%s <",keyword[i3]);
 				varNameLen = 0;
 				i += strlen(keyword[i3]);
-				while(memcmp(fileData+i,token[WHITESPACE],1) == 0) { /*skip any whitespaces*/
+				while(memcmp(fileData+i,token_list[WHITESPACE],1) == 0) { /*skip any whitespaces*/
 					i++;
 				} i--;
-				while(memcmp(fileData+i,token[SEMICOLON],1) != 0) { /*get variable name*/
+				while(memcmp(fileData+i,token_list[SEMICOLON],1) != 0) { /*get variable name*/
 					temp[varNameLen] = fileData[i];
 					varNameLen++;
 					i++;
@@ -375,14 +376,14 @@ int main(int argc, char * argv[]) {
 		if(memcmp(fileData+i,keyword[8],strlen(keyword[8])) == 0) { /*"routine" keyword*/
 			i += strlen(keyword[8]);
 			varNameLen = 0; paramLen = 0;
-			while(memcmp(fileData+i,token[7],1) == 0) { /*skip any whitespaces*/
+			while(memcmp(fileData+i,token_list[7],1) == 0) { /*skip any whitespaces*/
 				i++;
 			}
-			while(memcmp(fileData+i,token[SEMICOLON],1) != 0) { /*get variable name*/
-				if(memcmp(fileData+i,token[PAR_OPEN],1) == 0) { /*print function params*/
+			while(memcmp(fileData+i,token_list[SEMICOLON],1) != 0) { /*get variable name*/
+				if(memcmp(fileData+i,token_list[PAR_OPEN],1) == 0) { /*print function params*/
 					i++;
 					/*paramLen = 0;*/
-					while(memcmp(fileData+i,token[PAR_CLOSE],1) != 0) {
+					while(memcmp(fileData+i,token_list[PAR_CLOSE],1) != 0) {
 						temp_param[paramLen] = fileData[i];
 						paramLen++;
 						i++;
@@ -401,24 +402,20 @@ int main(int argc, char * argv[]) {
 			fprintf(stdout,"%s ( %s )\n",functions[current_function].name,functions[current_function].params);
 			current_function++;
 
-			/*Write the temp label with the underscore to the out file*/
+			/*Write the temp label to the out file*/
 			/*this can create a small routine*/
-			if(platformId == 5) {
-				fprintf(out,"_%s:\n",temp);
-			} else if(platformId == 10) {
-				fprintf(out,"_%s:\n",temp);
-			}
+			fprintf(out,"%s:\n",temp);
 
 			/*We now have the function HEADER, lets parse the body and write it
 			accordingly*/
-			while(memcmp(fileData+i,token[2],1) != 0) { /*skip until the open brace*/
+			while(memcmp(fileData+i,token_list[2],1) != 0) { /*skip until the open brace*/
 				i++;
 				if(i >= fileSize) {
 					goto streamEnded;
 				}
 			}
 			i++;
-			while(memcmp(fileData+i,token[3],1) != 0 && i <= fileSize) { /*parse until closing brace*/
+			while(memcmp(fileData+i,token_list[3],1) != 0 && i <= fileSize) { /*parse until closing brace*/
 				streamEnd = doStatementParse(out,fileData,fileSize,platformId);
 				if(streamEnd == 1) {
 					fprintf(stdout,"End of data\n");
@@ -441,12 +438,26 @@ int main(int argc, char * argv[]) {
 	for(i = 0; i < n_statements; i++) {
 		deleteStatement(&statements[i]);
 	}
-	if(in) { fclose(in); }
-	if(out) { fclose(out); }
-	if(temp_decompose != NULL) { free(temp_decompose); }
-	if(inputFile != NULL) { free(inputFile); }
-	if(outputFile != NULL) { free(outputFile); }
-	if(fileData != NULL) { free(fileData); }
-	if(namePlatform != NULL) { free(namePlatform); }
+	if(in) {
+		fclose(in);
+	}
+	if(out) {
+		fclose(out);
+	}
+	if(temp_decompose != NULL) {
+		free(temp_decompose);
+	}
+	if(inputFile != NULL) {
+		free(inputFile);
+	}
+	if(outputFile != NULL) {
+		free(outputFile);
+	}
+	if(fileData != NULL) {
+		free(fileData);
+	}
+	if(namePlatform != NULL) {
+		free(namePlatform);
+	}
 	return 0;
 }

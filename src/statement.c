@@ -1,3 +1,11 @@
+/* statement.c
+ * Create,Delete,Add translations and more stuff to modify or fit
+ * statements.
+ * 
+ * In Potato-C statements are small pieces of code wich are
+ * abstract representations of the actual instruction to be
+ * transpiled*/
+
 void createStatement(statement * s, const char* a, unsigned char n) {
 	if(a == NULL) {
 		fprintf(stderr,"Null string on createStatement\n");
@@ -40,19 +48,26 @@ void statementInfo(FILE * t, statement * s) {
 	fprintf(t,"Translations\n");
 	for(i = 0; i < 64; i++) {
 		if(s->translation[i] != NULL) {
-			fprintf(t,"%s\n",s->translation[i]);
+			fprintf(t,"%u : %s\n",i,s->translation[i]);
 		}
 	}
 	return;
 }
 
-void statementToAssembly(FILE * f, statement * s, unsigned char p, char* t) {
+/* statementToAssembly(
+ * f = Stream to output assembly code
+ * s = Target statement
+ * p = Target platform
+ * t = Statement parameters, separated by a comma (NULL = No parameters)
+ * )*/
+void statementToAssembly(FILE * f, statement * s, unsigned char p, char * t) {
 	size_t i = 0;
 	int i2 = 0;
 	int i3 = 0;
 	char * tx;
 	if(t == NULL) {
 		fprintf(stderr,"No parameter statement\n");
+		return;
 	}
 	if(s->translation[p] == NULL) {
 		if(s->name != NULL) {
@@ -60,7 +75,7 @@ void statementToAssembly(FILE * f, statement * s, unsigned char p, char* t) {
 		} else {
 			fprintf(stderr,"Illegal access to out-of-bounds for void statement\n");
 		}
-		abort();
+		return;
 	}
 	for(i = 0; i < strlen(s->translation[p]); i++) {
 		if(s->translation[p][i] == '$') { /*parameter*/

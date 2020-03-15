@@ -1,3 +1,9 @@
+/* function.c
+ * Creates/Deletes and modifies a function
+ * in Potato-C a function is made out of a
+ * routine wich can have different parameters
+*/
+
 void createFunction(function * f, const char* n, const char* p) {
 	f->name = malloc(strlen(n)+1);
 	if(f->name == NULL) {
