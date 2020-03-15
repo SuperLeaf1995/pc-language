@@ -5,6 +5,7 @@ many architectures, including ancient ones like CDC 6000 and SYSTEM/360.
 # Example usage
 ```c
 routine myFunc() {
+	x86("msg db 'Hello world!',0");
 	return;
 }
 ```
