@@ -3,10 +3,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#if defined(__GNUC__)
-#include <memory.h>
-#endif
 #include <string.h>
+#include <memory.h>
 
 typedef struct function {
 	char * name;
