@@ -1,0 +1,29 @@
+/*Target-aimed Potato-C file
+Ultimately Potato-C has to compile this file with the appropiate
+compilation and transformation*/
+
+void check_ra8(void) {
+	if(ra8 == NULL) {
+		ra16 = 65502;
+		ra8 = (ra16%4);
+	}
+	return;
+}
+
+void check_ra16(void) {
+	if(ra16 == NULL) {
+		ra8 = 255;
+		ra16 = (ra8%4);
+	}
+	return;
+}
+
+void amiga() {
+#if defined __AMIGA_OS__
+	check_ra8();
+#else
+	check_ra8();
+	check_ra16();
+#endif
+	return;
+}
