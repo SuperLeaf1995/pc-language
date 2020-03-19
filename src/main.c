@@ -5,7 +5,8 @@
 #include <string.h>
 #include <memory.h>
 
-#include "parser.c"
+#include "parser.h"
+#include "macro.h"
 
 int i;
 int i2;
@@ -25,6 +26,8 @@ const char * defaultOutputFileName = "out.bin";
 unsigned char platformId;
 unsigned char streamEnd;
 char * fileData;
+
+struct macro * macroList;
 
 const char * platforms[] = {
 	"cdc6000",
@@ -77,7 +80,7 @@ size_t getfilelen(FILE * _s) {
 	return i;
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char ** argv) {
 	/*Argument-processor*/
 	/*Processes the arguments and enables certain functions of the compiler*/
 	/*including warnings*/
@@ -159,15 +162,19 @@ int main(int argc, char * argv[]) {
 	
 	/*Comment remover
 	Removes comments from the source code and cleans the stuff*/
-	remove_between(fileData,"/*","*/"); /*Remove comments*/
-	remove_all(fileData,"\t"); /*Remove all tabs to cleanase code*/
-	parset_debug(stdout,fileData);
+	removeBetween(fileData,"/*","*/"); /*Remove comments*/
+	removeAll(fileData,"\t"); /*Remove all tabs to cleanase code*/
+	macroList = parseMacros(fileData);
+	if(macroList == NULL) {
+		fprintf(stderr,"Error occoured while parsing macros\n"); goto end; }
+	parsetDebug(stdout,fileData);
 
 	end:
 	if(in) { fclose(in); } if(out) { fclose(out); }
 	if(inputFile != NULL) { free(inputFile); }
 	if(outputFile != NULL) { free(outputFile); }
 	if(fileData != NULL) { free(fileData); }
+	if(macroList != NULL) { free(macroList); }
 	if(namePlatform != NULL) { free(namePlatform); }
 	return 0;
 }

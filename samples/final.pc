@@ -2,11 +2,16 @@
 Ultimately Potato-C has to compile this file with the appropiate
 compilation and transformation*/
 
+#define __IMPLICIT__
+#define __EXPLICIT__ 1024
+
 void check_ra8(void) {
 	if(ra8 == NULL) {
 		ra16 = 65502;
 		ra8 = (ra16%4);
 	}
+	ra8 = __IMPLICIT__;
+	ra16 = __EXPLICIT__;
 	return;
 }
 
@@ -20,6 +25,7 @@ void check_ra16(void) {
 
 void amiga() {
 #if defined __AMIGA_OS__
+	check_ra8();
 	check_ra8();
 #else
 	check_ra8();
