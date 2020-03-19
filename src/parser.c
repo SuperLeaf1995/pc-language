@@ -1,36 +1,12 @@
 #include "parser.h"
+#include "strfunc.h"
 
 const char* deb_key[] = {
 	"void","int","char","short","long","double","float",
 	"register","stack","nstack","unsigned","signed"
 };
 
-int removeBetween(char * str, const char* open, const char* close) {
-	size_t i; size_t openPos; size_t closePos;
-	openPos = 0; closePos = 0;
-	for(i = 0; i < strlen(str); i++) {
-		if(strncmp(str+i,open,strlen(open)) == 0) {
-			openPos = i;
-		} else if(strncmp(str+i,close,strlen(close)) == 0) {
-			closePos = i+strlen(close);
-			memmove(str+openPos,str+closePos,strlen(str)-i);
-		}
-	}
-	return 1;
-}
-
-int removeAll(char * str, const char* rem) {
-	size_t i;
-	for(i = 0; i < strlen(str); i++) {
-		if(strncmp(str+i,rem,strlen(rem)) == 0) {
-			memmove(str+i,str+i+strlen(rem),(strlen(str)-i));
-			i--;
-		}
-	}
-	return 1;
-}
-
-void parsetDebug(FILE * _s, char * str) {
+void parsetDebug(FILE * _s, register char * str) {
 	size_t i; size_t i2;
 	for(i = 0; i < strlen(str); i++) {
 		if(str[i] == '\t') {
@@ -65,7 +41,7 @@ void parsetDebug(FILE * _s, char * str) {
 					i += strlen(deb_key[i2]);
 				}
 			}
-			fputc(str[i],_s);
+			fprintf(_s,"%c",str[i]);
 		}
 	}
 	return;

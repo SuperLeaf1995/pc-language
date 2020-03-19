@@ -7,6 +7,7 @@
 
 #include "parser.h"
 #include "macro.h"
+#include "strfunc.h"
 
 int i;
 int i2;
@@ -26,8 +27,6 @@ const char * defaultOutputFileName = "out.bin";
 unsigned char platformId;
 unsigned char streamEnd;
 char * fileData;
-
-struct macro * macroList;
 
 const char * platforms[] = {
 	"cdc6000",
@@ -164,17 +163,20 @@ int main(int argc, char ** argv) {
 	Removes comments from the source code and cleans the stuff*/
 	removeBetween(fileData,"/*","*/"); /*Remove comments*/
 	removeAll(fileData,"\t"); /*Remove all tabs to cleanase code*/
-	macroList = parseMacros(fileData);
-	if(macroList == NULL) {
-		fprintf(stderr,"Error occoured while parsing macros\n"); goto end; }
+	parseMacros(fileData);
+	/*if(macroList == NULL) {
+		fprintf(stderr,"Error occoured while parsing macros\n"); goto end; }*/
 	parsetDebug(stdout,fileData);
 
 	end:
-	if(in) { fclose(in); } if(out) { fclose(out); }
-	if(inputFile != NULL) { free(inputFile); }
+	/*Iterate to free all macros names and values*/
+	/*i = 0; while(macroList[i].name != NULL) { free(macroList[i].name); i++; }
+	i = 0; while(macroList[i].literalValue != NULL) { free(macroList[i].literalValue); i++; }*/
+	/*if(macroList != NULL) { free(macroList); }*/ /*Finaly free the macro list*/
+	if(namePlatform != NULL) { free(namePlatform); } /*Free the platform name arg*/
+	if(inputFile != NULL) { free(inputFile); } /*Free file names*/
 	if(outputFile != NULL) { free(outputFile); }
-	if(fileData != NULL) { free(fileData); }
-	if(macroList != NULL) { free(macroList); }
-	if(namePlatform != NULL) { free(namePlatform); }
-	return 0;
+	if(fileData != NULL) { free(fileData); } /*Free the file data*/
+	if(in) { fclose(in); } if(out) { fclose(out); } /*Close all streams*/
+	return 0; /*We are ready to go*/
 }

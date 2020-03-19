@@ -1,6 +1,6 @@
 #Potato-C Makefile for GCC/DJGPP
 CC = gcc
-CFLAGS = -Wall -Werror -Wstrict-prototypes -ansi -pedantic -Wextra -I$(SRC_DIR) -std=c89
+CFLAGS = -Wall -Wextra -Werror -pedantic -ansi -I$(SRC_DIR)
 
 #Directories
 SRC_DIR = src
@@ -13,13 +13,16 @@ APP_NAME = potato-c.o
 all: $(OUT_DIR)/potato-c.o
 	echo Done
 
-$(OUT_DIR)/potato-c.o: $(SRC_DIR)/main.c $(OUT_DIR)/parser.obj $(OUT_DIR)/macro.obj
+$(OUT_DIR)/potato-c.o: $(SRC_DIR)/main.c $(OUT_DIR)/parser.obj $(OUT_DIR)/macro.obj $(OUT_DIR)/strfunc.obj
 	$(CC) $(CFLAGS) $^ -o $@
 
-$(OUT_DIR)/parser.obj: $(SRC_DIR)/parser.c
+$(OUT_DIR)/parser.obj: $(SRC_DIR)/parser.c $(OUT_DIR)/strfunc.obj
 	$(CC) $(CFLAGS) -c $^ -o $@
 	
-$(OUT_DIR)/macro.obj: $(SRC_DIR)/macro.c
+$(OUT_DIR)/macro.obj: $(SRC_DIR)/macro.c $(OUT_DIR)/strfunc.obj
+	$(CC) $(CFLAGS) -c $^ -o $@
+	
+$(OUT_DIR)/strfunc.obj: $(SRC_DIR)/strfunc.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
 #Install Potato-C

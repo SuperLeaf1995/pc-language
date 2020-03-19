@@ -11,10 +11,6 @@ struct macro {
 	char * literalValue; /*Value of the macro*/
 };
 
-char * getName(char * str);
-char * getUntilMatch(char * str, const char* m);
-size_t skipUntilMatch(char * str, const char* m);
-size_t skipWhileMatch(char * str, const char* m);
-struct macro * parseMacros(char * str);
+void parseMacros(register char * str);
 
 #endif
