@@ -4,6 +4,7 @@ compilation and transformation*/
 
 #define __IMPLICIT__
 #define __EXPLICIT__ 1024
+#define
 
 void check_ra8(void) {
 	if(ra8 == NULL) {

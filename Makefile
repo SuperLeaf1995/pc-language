@@ -10,10 +10,10 @@ OUT_DIR = bin
 INSTALL_PATH = /usr/local/bin/potato-c
 APP_NAME = potato-c.o
 
-all: $(OUT_DIR)/potato-c.o
+all: $(OUT_DIR)/pc.o
 	echo Done
 
-$(OUT_DIR)/potato-c.o: $(SRC_DIR)/main.c $(OUT_DIR)/parser.obj $(OUT_DIR)/macro.obj $(OUT_DIR)/strfunc.obj $(OUT_DIR)/warning.obj
+$(OUT_DIR)/pc.o: $(SRC_DIR)/main.c $(OUT_DIR)/parser.obj $(OUT_DIR)/macro.obj $(OUT_DIR)/strfunc.obj $(OUT_DIR)/warning.obj
 	$(CC) $(CFLAGS) $^ -o $@
 
 $(OUT_DIR)/parser.obj: $(SRC_DIR)/parser.c $(OUT_DIR)/strfunc.obj

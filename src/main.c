@@ -90,7 +90,14 @@ int main(int argc, char ** argv) {
 		fprintf(stderr,"Too many arguments supplied\n"); goto end; }
 	for(i = 1; i < argc; i++) {
 		if(strcmp("-Wall",argv[i]) == 0) { /*Is -Wall supplied?*/
+			for(i = 1; i < TOTAL_WARNINGS+1; i++) {
+				warnActivated[i] = 1;
+			}
 			fprintf(stdout,"All warnings enabled\n");
+		} else if(strcmp("-Wimplicit-macros",argv[i]) == 0) { /*Is -Wall supplied?*/
+			warnActivated[1] = 1;
+		} else if(strcmp("-Wno-name-define",argv[i]) == 0) { /*Is -Wall supplied?*/
+			warnActivated[2] = 1;
 		} else if(strcmp("-ha",argv[i]) == 0) { /*Is -Wall supplied?*/
 			fprintf(stdout,"Help - Architectures\nNote: Any architecture instruction can be written manually using the echo() command\n");
 		} else if(strcmp("-p",argv[i]) == 0) { /*Explicit platform*/

@@ -1,14 +1,15 @@
 #include "strfunc.h"
 
 int removeBetween(register char * str, register const char* open, register const char* close) {
-	size_t i; size_t openPos; size_t closePos;
+	size_t i; size_t openPos; size_t closePos; char opened = 0;
 	openPos = 0; closePos = 0;
 	for(i = 0; i < strlen(str); i++) {
 		if(strncmp(str+i,open,strlen(open)) == 0) {
-			openPos = i;
-		} else if(strncmp(str+i,close,strlen(close)) == 0) {
+			openPos = i; opened = 1;
+		} else if(strncmp(str+i,close,strlen(close)) == 0 && opened == 1) {
 			closePos = i+strlen(close);
 			memmove(str+openPos,str+closePos,strlen(str)-i);
+			opened = 0;
 		}
 	}
 	return 1;
