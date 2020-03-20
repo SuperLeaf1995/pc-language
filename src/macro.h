@@ -11,6 +11,6 @@ struct macro {
 	char * literalValue; /*Value of the macro*/
 };
 
-void parseMacros(register char * str);
+int parseMacros(register char * str);
 
 #endif

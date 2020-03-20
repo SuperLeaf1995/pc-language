@@ -32,7 +32,7 @@ char * getName(register char * str) {
 	&& strncmp(str+name_len,";",strlen(";")) != 0) {
 		name_len++;
 	}
-	str_ret = malloc(name_len);
+	str_ret = malloc(name_len+1);
 	if(str_ret == NULL) { return NULL; }
 	strncpy(str_ret,str,name_len); str_ret[name_len] = 0;
 	return str_ret;
@@ -44,7 +44,7 @@ char * getUntilMatch(register char * str, register const char* m) {
 	while(strncmp(str+name_len,m,strlen(m)) != 0) {
 		name_len++;
 	}
-	str_ret = malloc(name_len);
+	str_ret = malloc(name_len+1);
 	if(str_ret == NULL) { return NULL; }
 	strncpy(str_ret,str,name_len); str_ret[name_len] = 0;
 	return str_ret;
@@ -63,7 +63,17 @@ size_t skipWhileMatch(register char * str, register const char* m) {
 	size_t i = 0;
 	while(strncmp(str+i,m,strlen(m)) == 0) {
 		i++;
-		if(i > strlen(str)) { return 0; }
+		if(i > strlen(str)) { return strlen(str); }
 	}
 	return i;
+}
+
+size_t hasAsciiBefore(register char * str, register const char* b) {
+	size_t i = 0;
+	while(strncmp(str+i,b,strlen(b)) != 0) {
+		if(isascii(str[i])) { return 1; }
+		i++;
+		if(i > strlen(str)) { break; }
+	}
+	return 0;
 }

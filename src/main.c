@@ -5,6 +5,7 @@
 #include <string.h>
 #include <memory.h>
 
+#include "warning.h"
 #include "parser.h"
 #include "macro.h"
 #include "strfunc.h"
@@ -163,7 +164,11 @@ int main(int argc, char ** argv) {
 	Removes comments from the source code and cleans the stuff*/
 	removeBetween(fileData,"/*","*/"); /*Remove comments*/
 	removeAll(fileData,"\t"); /*Remove all tabs to cleanase code*/
-	parseMacros(fileData);
+	i = parseMacros(fileData);
+	if(i) {
+		fprintf(stderr,"Macro failure %u\n",i);
+		goto end;
+	}
 	/*if(macroList == NULL) {
 		fprintf(stderr,"Error occoured while parsing macros\n"); goto end; }*/
 	parsetDebug(stdout,fileData);

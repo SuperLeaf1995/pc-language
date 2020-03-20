@@ -39,6 +39,7 @@ void parsetDebug(FILE * _s, register char * str) {
 					fprintf(_s,"%s",deb_key[i2]);
 					#endif
 					i += strlen(deb_key[i2]);
+					if(i > strlen(str)) { return; }
 				}
 			}
 			fprintf(_s,"%c",str[i]);
