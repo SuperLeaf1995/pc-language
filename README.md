@@ -1,6 +1,5 @@
-# Potato-C
-Potato-C is a project for unifying assembly into a single syntax for
-many architectures, including ancient ones like CDC 6000 and SYSTEM/360.
+# PC-Language
+PC is a set of tools for making C-alike code while at the same time doing operations ala Assembly. Keeping the speed fast, and allowing the making of software for embedded devices.
 
 # Example usage
 ```c
