@@ -69,12 +69,29 @@ size_t skipWhileMatch(register char * str, register const char* m) {
 	return i;
 }
 
-size_t hasAsciiBefore(register char * str, register const char* b) {
+size_t hasAsciiBefore(register char * str, register const char* m) {
 	size_t i = 0;
-	while(strncmp(str+i,b,strlen(b)) != 0) {
+	while(strncmp(str+i,m,strlen(m)) != 0) {
 		if(isascii(str[i])) { return 1; }
 		i++;
 		if(i > strlen(str)) { break; }
 	}
 	return 0;
+}
+
+/*replaces M with B*/
+void replaceWith(register char * str, register const char * m, register const char * b) {
+	size_t i;
+	for(i = 0; i < strlen(str); i++) {
+		if(strncmp(str+i,m,strlen(m)) == 0) {
+			if(strlen(m) == strlen(b)) { /*b and m are equal in lenght*/
+				memcpy(str+i,b,strlen(m));
+			} else if(strlen(m) > strlen(b)) { /*m is more lenghty than b*/
+				memcpy(str+i,str+i,strlen(m)); /*decrease size of str*/
+			} else {
+				
+			}
+		}
+	}
+	return;
 }

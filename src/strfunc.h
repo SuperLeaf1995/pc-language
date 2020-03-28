@@ -19,5 +19,6 @@ char * getUntilMatch(register char * str, register const char* m);
 size_t skipUntilMatch(register char * str, register const char* m);
 size_t skipWhileMatch(register char * str, register const char* m);
 size_t hasAsciiBefore(register char * str, register const char* m);
+void replaceWith(register char * str, register const char * m, register const char * b);
 
 #endif

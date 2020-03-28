@@ -9,5 +9,6 @@
 #define WARNING_UNNAMED_DEFINE 2
 
 void warning(int warn, int line);
+void activateWarning(int warn);
 
 #endif
