@@ -4,8 +4,8 @@ int warnActivated[16] = { 0,0,0 };
 
 const char * textWarning[16] = {
 	"Warning: ",
-	"Implicit define macro declaration defaults to a zero-defined macro\n",
-	"Define macro lacks any name, and thus it's ignored\n"
+	"Implicit type macro declaration defaults to a zero-defined macro\n",
+	"type macro lacks any name, and thus it's ignored\n"
 };
 
 void warning(int warn, int line) {

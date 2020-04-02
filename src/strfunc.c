@@ -82,14 +82,37 @@ size_t hasAsciiBefore(register char * str, register const char* m) {
 /*replaces M with B*/
 void replaceWith(register char * str, register const char * m, register const char * b) {
 	size_t i;
+	char * tmpbuf;
 	for(i = 0; i < strlen(str); i++) {
 		if(strncmp(str+i,m,strlen(m)) == 0) {
 			if(strlen(m) == strlen(b)) { /*b and m are equal in lenght*/
-				memcpy(str+i,b,strlen(m));
+				printf("EQUAL\n");
+				memcpy(str+i,b,strlen(b));
 			} else if(strlen(m) > strlen(b)) { /*m is more lenghty than b*/
-				memcpy(str+i,str+i,strlen(m)); /*decrease size of str*/
+				/*Remove M (but leave space for B) and then place B*/
+				memmove(str+i,str+i+(strlen(m)-strlen(b)),strlen(str)-i);
+				memcpy(str+i,b,strlen(b));
 			} else {
+				/*B is bigger than M, move the string and leave space for B*/
+				/*moving the string forward is utterly hard*/
+				/*allocate some memory for a tempbuf*/
+				tmpbuf = malloc((strlen(str)-i)+1);
+				if(tmpbuf == NULL) {
+					return;
+				}
 				
+				/*copy to temporal buffer*/
+				memcpy(tmpbuf,str+i,strlen(str)-i);
+				
+				/*copy temporal buffer to (str+i+strlen(b)) (str expands)*/
+				memcpy(str+i+strlen(b),tmpbuf,strlen(str)-i);
+				
+				/*replace space left with b*/
+				memcpy(str+i,b,strlen(b));
+				
+				if(tmpbuf != NULL) {
+					free(tmpbuf);
+				}
 			}
 		}
 	}
