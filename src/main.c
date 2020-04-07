@@ -9,24 +9,57 @@
 #include "parser.h"
 #include "macro.h"
 #include "strfunc.h"
+#include "file.h"
 
-int i;
-int i2;
-int i3;
+#define __VER_MAJOR__ 0
+#define __VER_MINOR__ 1
+#define __VER_BUILD__ 7
 
+#if !defined(__PLATFORM__)
+/*Determine compilation platform
+This is easy with GNUC*/
+#if defined(__GNUC__)
+
+#if defined(__i386__)
+#define __PLATFORM__ "i386"
+#endif
+#if defined(__i686__)
+#define __PLATFORM__ "i686"
+#endif
+#if defined(__mips__)
+#define __PLATFORM__ "MIPS"
+#endif
+#if defined(__openrisc__)
+#define __PLATFORM__ "Openrisc"
+#endif
+#if defined(__pdp11__)
+#define __PLATFORM__ "PDP-11"
+#endif
+
+#endif
+
+/*We may also have TurboC as our main compiler*/
+#if defined(__TURBOC__)
+#define __PLATFORM__ "8086"
+#endif
+
+#endif
+
+#if !defined(__PLATFORM__)
+#define __PLATFORM__ "Unknown"
+#endif
+
+int i; int i2; int i3;
 int fileSize;
 
-FILE * out;
-FILE * in;
-char * outputFile;
-char * inputFile;
+FILE * out; FILE * in;
+char * outputFile; char * inputFile;
 char * namePlatform;
 
 const char * defaultPlatform = "x86";
 const char * defaultOutputFileName = "out.bin";
 
-unsigned char platformId;
-unsigned char streamEnd;
+unsigned char platformId; unsigned char streamEnd;
 char * fileData;
 
 const char * platforms[] = {
@@ -70,15 +103,6 @@ const char * platforms[] = {
 	"a64",
 	"elbrus"
 };
-
-size_t getfilelen(FILE * _s) {
-	register size_t i = 0;
-	while(fgetc(_s) != EOF) {
-		i++;
-	}
-	fseek(_s,SEEK_SET,0);
-	return i;
-}
 
 int main(int argc, char ** argv) {
 	/*Argument-processor*/
@@ -126,6 +150,9 @@ int main(int argc, char ** argv) {
 				fprintf(stderr,"Cannot allocate memory for explicit output filename\n"); goto end; }
 			memcpy(outputFile,argv[i],strlen(argv[i])+1);
 			ignoreOutputFile: i = i;
+		}  else if(strcmp("-v",argv[i]) == 0 ) { /*Print version and then exit*/
+			fprintf(stdout,"PC-Language Compiler v%d.%d.%d for %s\n",__VER_MAJOR__,__VER_MINOR__,__VER_BUILD__,__PLATFORM__);
+			goto end;
 		} else { /*input filename (implicit)*/
 			fprintf(stdout,"Input file issued was: %s\n",argv[i]);
 			if(inputFile != NULL) { /*If file was already issued, skip it!*/

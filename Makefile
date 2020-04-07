@@ -16,7 +16,7 @@ all: $(OUT_DIR) $(OUT_DIR)/pc.o
 $(OUT_DIR):
 	mkdir $(OUT_DIR)
 
-$(OUT_DIR)/pc.o: $(SRC_DIR)/main.c $(OUT_DIR)/parser.obj $(OUT_DIR)/macro.obj $(OUT_DIR)/strfunc.obj $(OUT_DIR)/warning.obj
+$(OUT_DIR)/pc.o: $(SRC_DIR)/main.c $(OUT_DIR)/file.obj $(OUT_DIR)/parser.obj $(OUT_DIR)/macro.obj $(OUT_DIR)/strfunc.obj $(OUT_DIR)/warning.obj
 	$(CC) $(CFLAGS) $^ -o $@
 
 $(OUT_DIR)/parser.obj: $(SRC_DIR)/parser.c $(OUT_DIR)/strfunc.obj
@@ -30,6 +30,9 @@ $(OUT_DIR)/strfunc.obj: $(SRC_DIR)/strfunc.c
 	
 $(OUT_DIR)/warning.obj: $(SRC_DIR)/warning.c
 	$(CC) $(CFLAGS) -c $^ -o $@
+	
+$(OUT_DIR)/file.obj: $(SRC_DIR)/file.c
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 #Install Potato-C
 install: $(OUT_DIR)/potato-c.o
@@ -37,9 +40,10 @@ install: $(OUT_DIR)/potato-c.o
 	cp $(OUT_DIR)/potato-c.o $(INSTALL_PATH)/potato-c.o
 
 #Removing Potato-C from system
-unistall:
+uninstall:
 	rm -rf $(INSTALL_PATH)
 
 #Clean
 clean:
 	rm -f $(OUT_DIR)/*.obj
+	rm out.bin

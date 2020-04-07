@@ -1,16 +1,15 @@
-#ifndef PARSER_H
-#define PARSER_H
+#ifndef FILE_H
+#define FILE_H
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <memory.h>
 #include <string.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-void parsetDebug(FILE * _s, register char * str);
+size_t getfilelen(FILE * _s);
 
 #if defined(__cplusplus)
 }

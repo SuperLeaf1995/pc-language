@@ -6,6 +6,10 @@
 #include <memory.h>
 #include <string.h>
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #ifdef __USE_CTYPE__ /*Compatibility with old compilers*/
 #include <ctype.h>
 #else
@@ -20,5 +24,9 @@ size_t skipUntilMatch(register char * str, register const char* m);
 size_t skipWhileMatch(register char * str, register const char* m);
 size_t hasAsciiBefore(register char * str, register const char* m);
 void replaceWith(register char * str, register const char * m, register const char * b);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif
