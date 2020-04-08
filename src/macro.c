@@ -2,36 +2,41 @@
 #include "strfunc.h"
 #include "warning.h"
 
-void define(char * name, size_t value) {
-	fprintf(stdout,"DEFINED MACRO %s WITH VALUE %u\n",name,value);
+static int cont = 0; /*Used to count macro definitions (i.e, define macro 1 in 1, 2 in 2, etc)*/
+
+const char * strzero = "0";
+
+void define(struct macro * m) {
+	fprintf(stdout,"DEFINED MACRO %s WITH VALUE %s\n",m[cont].name,m[cont].literalValue);
+	cont++;
 	return;
 }
 
-int parseMacros(register char * str) {
+int parseMacros(struct macro * m, register char * str) {
 	size_t i; char * locStr; /*the local string and etc*/
 	char * macroName; size_t offForDelete; /*delete macro after definition*/
 	size_t offOfLocStr; /*to separate arguments from macro*/
 	int newlineCounter = 0;
 	
+	/*Allocate space for macros*/
+	m = malloc(32*sizeof(struct macro));
+	if(m == NULL) { return 13; }
+	
 	for(i = 0; i < strlen(str); i++) {
-		if(strncmp(str+i,"\n",strlen("\n")) == 0) {
-			newlineCounter++;
-		}
+		if(strncmp(str+i,"\n",strlen("\n")) == 0) { newlineCounter++; }
 		
-		if(strncmp(str+i,"#",strlen("#")) == 0) { /*macro preprocessor statement!*/
-			offForDelete = i;
+		/*macro preprocessor statement is coming*/
+		if(strncmp(str+i,"#",strlen("#")) == 0) {
+			offForDelete = i; /*delete everything (deleteOffset)*/
+			i++; /*skip the first char*/
 			
-			i++; /*skip the hashtag*/
+			/*Get the macro statement (see below)*/
+			locStr = getName(str+i);
+			if(locStr == NULL) { return 3; } /*If there is no macro statement, bail out*/
+			i += strlen(locStr); /*Pad out and go where the arguments of the macro stat. are*/
 			
-			locStr = getName(str+i); /*allocate memory for local string*/
-			
-			if(locStr == NULL) {
-				return 3;
-			} /*return*/
-			
-			i += strlen(locStr);
-			
-			if(strncmp(locStr,"type",strlen("type")) == 0) { /*a macro is defined!*/
+			/*A new macro is defined*/
+			if(strncmp(locStr,"define",strlen("define")) == 0) {
 				offOfLocStr = i;
 				offOfLocStr += skipWhileMatch(str+offOfLocStr," ");
 				
@@ -41,36 +46,43 @@ int parseMacros(register char * str) {
 				
 				if(hasAsciiBefore(str+offOfLocStr,"\n") == 0) { /*type has no name*/
 					warning(WARNING_UNNAMED_DEFINE,newlineCounter);
-				} else { /*type has name*/
+				} else { /*Define has name?*/
 					/*Get argument 1: Define name*/
-					locStr = getName(str+offOfLocStr); /*allocate memory for local string*/
-					if(locStr == NULL) {
-						return 2;
-					} /*return if no memory available*/
 					
-					i += strlen(locStr); /*add local string strlen to total iteration*/
-					offOfLocStr += strlen(locStr); /*offse of locstr (sum the string lenght of locstr)*/
+					/*Allocate memory for local string*/
+					locStr = getName(str+offOfLocStr);
+					if(locStr == NULL) { return 2; }
 					
-					fprintf(stdout,"Define %s\n",locStr);
+					/*Add local string strlen to total iteration*/
+					/*offset of locstr (sum the string lenght of locstr)*/
+					i += strlen(locStr);
+					offOfLocStr += strlen(locStr);
 					
-					macroName = malloc(strlen(locStr)+1); /*free LOCSTR for define value, but*/
-					if(macroName == NULL) {
-						return 4;
-					} /*copy the contents of the macro name*/
+					/*Save the name in the macro struct*/
+					m[cont].name = malloc(strlen(locStr)+1);
+					if(m[cont].name == NULL) { return 10; }
+					strcpy(m[cont].name,locStr);
 					
-					memcpy(macroName,locStr,strlen(locStr)+1); /*to a new place*/
+					/*Free LOCSTR for define value, but
+					copy the contents of the macro name
+					to a new place*/
+					macroName = malloc(strlen(locStr)+1);
+					if(macroName == NULL) { return 4; }
+					memcpy(macroName,locStr,strlen(locStr)+1);
 					
-					if(locStr != NULL) {
-						free(locStr);
-					} /*free locstr*/
+					/*Free locstr*/
+					if(locStr != NULL) { free(locStr); }
 				
 					/*Implicit define macro*/
-					if(hasAsciiBefore(str+offOfLocStr,"\n") == 0) { /*Check if arguments exists*/
-						warning(WARNING_IMPLICIT_DEFINE,newlineCounter); /*warn for implicit define*/
-						
-						fprintf(stdout,"(Implicit) Value %d\n",0);
-						
-						replaceWith(str,macroName,"0"); /*replace macro with default implicit*/
+					/*Check for define's value*/
+					if(hasAsciiBefore(str+offOfLocStr,"\n") == 0) {
+						warning(WARNING_IMPLICIT_DEFINE,newlineCounter);
+
+						/*Define the new macro*/
+						m[cont].literalValue = malloc(strlen(locStr)+1);
+						if(m[cont].literalValue == NULL) { return 11; }
+						strcpy(m[cont].literalValue,strzero);
+						define(m);
 						
 						removeBetween(str+offForDelete,"#","\n");
 					} else { /*Explicit define macro*/
@@ -80,22 +92,19 @@ int parseMacros(register char * str) {
 						if(locStr == NULL) {
 							return 4;
 						}
+
+						m[cont].literalValue = malloc(strlen(locStr)+1);
+						if(m[cont].literalValue == NULL) {
+							return 12;
+						}
+						strcpy(m[cont].literalValue,locStr);
+						define(m);
 						
-						fprintf(stdout,"(Explicit) Value %s\n",locStr);
-						
-						replaceWith(str,macroName,locStr); /*replace instances of the macro with the value*/
-						
+						/*Skip value lenght (we should be in another line right now)*/
 						i += strlen(locStr);
-						
-						removeBetween(str+offForDelete,"#","\n");
-						
-						if(locStr != NULL) {
-							free(locStr);
-						} /*free memory to avoid memory leaks*/
+						if(locStr != NULL) { free(locStr); }
 					}
-					if(macroName != NULL) {
-						free(macroName);
-					}
+					if(macroName != NULL) { free(macroName); }
 				}
 			} else {
 				if(locStr != NULL) {

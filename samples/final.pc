@@ -2,8 +2,8 @@
 Ultimately Potato-C has to compile this file with the appropiate
 compilation and transformation*/
 
-#type __IMPLICIT__
-#type __EXPLICIT__ 1024
+#define __IMPLICIT__ 4096
+#define __EXPLICIT__ 1024
 
 void check_ra8(void) {
 	if(ra8 == NULL) {

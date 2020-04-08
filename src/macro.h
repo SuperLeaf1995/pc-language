@@ -15,7 +15,8 @@ struct macro {
 	char * literalValue; /*Value of the macro*/
 };
 
-int parseMacros(register char * str);
+void define(struct macro * m);
+int parseMacros(struct macro * m, register char * str);
 
 #if defined(__cplusplus)
 }

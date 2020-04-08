@@ -104,6 +104,8 @@ const char * platforms[] = {
 	"elbrus"
 };
 
+struct macro * globalMacroList;
+
 int main(int argc, char ** argv) {
 	/*Argument-processor*/
 	/*Processes the arguments and enables certain functions of the compiler*/
@@ -198,7 +200,7 @@ int main(int argc, char ** argv) {
 	Removes comments from the source code and cleans the stuff*/
 	removeBetween(fileData,"/*","*/"); /*Remove comments*/
 	removeAll(fileData,"\t"); /*Remove all tabs to cleanase code*/
-	i = parseMacros(fileData);
+	i = parseMacros(globalMacroList,fileData);
 	if(i) {
 		fprintf(stderr,"Macro failure %u\n",i);
 		goto end;
@@ -215,6 +217,7 @@ int main(int argc, char ** argv) {
 	if(namePlatform != NULL) { free(namePlatform); } /*Free the platform name arg*/
 	if(inputFile != NULL) { free(inputFile); } /*Free file names*/
 	if(outputFile != NULL) { free(outputFile); }
+	if(globalMacroList != NULL) { free(globalMacroList); } /*Free the global macro name struct*/
 	if(fileData != NULL) { free(fileData); } /*Free the file data*/
 	if(in) { fclose(in); } if(out) { fclose(out); } /*Close all streams*/
 	return 0; /*We are ready to go*/
